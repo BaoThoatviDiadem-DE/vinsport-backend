@@ -1,0 +1,226 @@
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router";
+import { Filter, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import api from "../api/api"; //
+import { MOCK_PRODUCTS } from "../data/mockData"; //
+import { ProductCard } from "../components/ProductCard"; //
+import toast from "react-hot-toast"; //
+
+export const Products = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  
+  // --- QUẢN LÝ DỮ LIỆU ---
+  const [products, setProducts] = useState<any[]>([]); 
+  const [isLoading, setIsLoading] = useState(true);
+
+  const searchQuery = searchParams.get("search") || "";
+  const selectedCategory = searchParams.get("category") || "";
+  const selectedBrand = searchParams.get("brand") || "";
+  const maxPriceParam = searchParams.get("maxPrice");
+  const maxPrice = maxPriceParam ? parseInt(maxPriceParam, 10) : Infinity;
+
+  // Gọi API lấy dữ liệu mỗi khi từ khóa tìm kiếm thay đổi
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        // Gửi tham số tìm kiếm trực tiếp lên Backend
+        const data: any = await api.get("/products", { 
+          params: { search: searchQuery } 
+        }); 
+        setProducts(data);
+      } catch (error) {
+        // Nếu lỗi kết nối, kiểm tra chế độ Mock trong .env
+        if (import.meta.env.VITE_USE_MOCK === "true") {
+          setProducts(MOCK_PRODUCTS);
+        } else {
+          toast.error("Không thể tải danh sách sản phẩm từ máy chủ!");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [searchQuery]);
+
+  const categories = ["Giày", "Áo", "Bóng", "Phụ kiện"];
+  const brands = ["Nike", "Adidas", "Puma"];
+  const priceRanges = [
+    { label: "Dưới 1 triệu", value: 1000000 },
+    { label: "Dưới 2 triệu", value: 2000000 },
+    { label: "Dưới 3 triệu", value: 3000000 },
+    { label: "Mọi mức giá", value: Infinity },
+  ];
+
+  const updateFilter = (key: string, value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value) newParams.set(key, value);
+    else newParams.delete(key);
+    setSearchParams(newParams);
+  };
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchCategory = selectedCategory ? product.category === selectedCategory : true;
+      const matchBrand = selectedBrand ? product.brand === selectedBrand : true;
+      const matchPrice = product.price <= maxPrice;
+      return matchCategory && matchBrand && matchPrice;
+    });
+  }, [products, selectedCategory, selectedBrand, maxPrice]);
+
+  const FilterSidebar = () => (
+    <div className="space-y-8">
+      <div>
+        <h3 className="font-bold text-lg mb-4 flex items-center gap-2 border-b pb-2">
+          <Filter className="w-5 h-5" /> Bộ Lọc
+        </h3>
+        
+        {/* Lọc theo Danh mục */}
+        <div className="mb-6">
+          <h4 className="font-semibold mb-3 text-slate-800">Danh mục</h4>
+          <div className="space-y-2">
+            <button 
+              onClick={() => updateFilter("category", "")}
+              className={`block w-full text-left text-sm ${!selectedCategory ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"}`}
+            >
+              Tất cả danh mục
+            </button>
+            {categories.map(cat => (
+              <button 
+                key={cat}
+                onClick={() => updateFilter("category", cat)}
+                className={`block w-full text-left text-sm ${selectedCategory === cat ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Lọc theo Thương hiệu */}
+        <div className="mb-6">
+          <h4 className="font-semibold mb-3 text-slate-800">Thương hiệu</h4>
+          <div className="space-y-2">
+            <button 
+              onClick={() => updateFilter("brand", "")}
+              className={`block w-full text-left text-sm ${!selectedBrand ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"}`}
+            >
+              Tất cả thương hiệu
+            </button>
+            {brands.map(brand => (
+              <button 
+                key={brand}
+                onClick={() => updateFilter("brand", brand)}
+                className={`block w-full text-left text-sm ${selectedBrand === brand ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"}`}
+              >
+                {brand}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Lọc theo Mức giá */}
+        <div>
+          <h4 className="font-semibold mb-3 text-slate-800">Mức giá</h4>
+          <div className="space-y-2">
+            {priceRanges.map(range => (
+              <label key={range.value} className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="price" 
+                  checked={maxPrice === range.value}
+                  onChange={() => updateFilter("maxPrice", range.value === Infinity ? "" : range.value.toString())}
+                  className="text-orange-600 focus:ring-orange-500"
+                />
+                <span className="text-sm text-slate-600">{range.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {searchQuery && (
+        <h1 className="text-2xl font-bold mb-8">
+          Kết quả tìm kiếm cho: "<span className="text-orange-600">{searchQuery}</span>"
+        </h1>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Sidebar máy tính */}
+        <aside className="hidden md:block w-64 flex-shrink-0">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 sticky top-24">
+            <FilterSidebar />
+          </div>
+        </aside>
+
+        {/* Thanh lọc điện thoại */}
+        <div className="md:hidden flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 mb-4">
+          <span className="font-medium text-slate-700">{filteredProducts.length} Sản phẩm</span>
+          <button onClick={() => setIsMobileFilterOpen(true)} className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-lg font-medium text-sm">
+            <SlidersHorizontal className="w-4 h-4" /> Lọc & Sắp xếp
+          </button>
+        </div>
+
+        {/* Danh sách sản phẩm */}
+        <div className="flex-grow">
+          <div className="mb-6 hidden md:flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-800">
+              {selectedCategory ? `Sản phẩm ${selectedCategory}` : "Tất cả sản phẩm"}
+            </h2>
+            <span className="text-slate-500 text-sm">Hiển thị {filteredProducts.length} sản phẩm</span>
+          </div>
+
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100">
+              <Loader2 className="w-12 h-12 text-orange-600 animate-spin mb-4" />
+              <p className="text-slate-500 font-medium">Đang kết nối hệ thống VinSport...</p>
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
+              <div className="text-slate-400 mb-4 flex justify-center"><Filter className="w-12 h-12" /></div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Không tìm thấy sản phẩm nào</h3>
+              <p className="text-slate-500 mb-6">Hệ thống đang cập nhật hoặc chưa kết nối dữ liệu.</p>
+              <button 
+                onClick={() => setSearchParams(new URLSearchParams())}
+                className="bg-orange-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-700"
+              >
+                Xóa bộ lọc
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Menu lọc di động */}
+      {isMobileFilterOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileFilterOpen(false)}></div>
+          <div className="relative w-4/5 max-w-sm bg-white h-full shadow-2xl overflow-y-auto z-10 p-6 flex flex-col">
+            <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <h2 className="text-xl font-bold">Lọc Sản Phẩm</h2>
+              <button onClick={() => setIsMobileFilterOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-grow"><FilterSidebar /></div>
+            <div className="mt-8 pt-4 border-t flex gap-4">
+              <button onClick={() => { setSearchParams(new URLSearchParams()); setIsMobileFilterOpen(false); }} className="flex-1 py-3 border border-slate-300 rounded-lg font-medium">Xóa lọc</button>
+              <button onClick={() => setIsMobileFilterOpen(false)} className="flex-1 py-3 bg-orange-600 text-white rounded-lg font-medium">Áp dụng</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
