@@ -1,19 +1,16 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Khởi tạo một phiên bản Axios
 const api = axios.create({
-  // THAY ĐỔI QUAN TRỌNG: Lấy link từ file .env thay vì viết cứng
-  baseURL: import.meta.env.VITE_API_BASE_URL, 
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-  timeout: 5000, 
+  timeout: 5000,
 });
 
-// Thiết lập "màng lọc" xử lý dữ liệu trả về
 api.interceptors.response.use(
   (response) => {
-    return response.data; // Chỉ lấy phần dữ liệu lõi
+    return response.data;
   },
   (error) => {
     console.error("Lỗi kết nối hệ thống VinSport:", error.message);
@@ -21,4 +18,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api; // Xuất ra với tên 'api' để dùng bên Products.tsx cho tiện
+export default api;
