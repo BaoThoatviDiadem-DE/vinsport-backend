@@ -17,11 +17,11 @@ router.post("/login", async (req, res) => {
 
     const result = await pool
       .request()
-      .input("email", sql.NVarChar, String(email).trim())
+      .input("email", sql.NVarChar(100), String(email).trim())
       .query(`
-        SELECT user_id, name, email, password, phone, address
+        SELECT user_id, [name], [email], [password], [phone], [address]
         FROM Users
-        WHERE email = @email
+        WHERE [email] = @email
       `);
 
     if (result.recordset.length === 0) {
@@ -32,7 +32,7 @@ router.post("/login", async (req, res) => {
 
     const user = result.recordset[0];
 
-    if (user.password !== password) {
+    if (String(user.password) !== String(password)) {
       return res.status(401).json({
         message: "Tài khoản hoặc mật khẩu không chính xác",
       });
@@ -51,8 +51,10 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.error("POST /api/login error:", error);
+    console.error("SQL message:", error?.originalError?.info?.message || error.message);
+
     return res.status(500).json({
-      message: "Lỗi đăng nhập",
+      message: error?.originalError?.info?.message || error.message || "Lỗi đăng nhập",
     });
   }
 });
@@ -60,7 +62,7 @@ router.post("/login", async (req, res) => {
 // POST /api/register
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, phone = "", address = "" } = req.body || {};
+    const { name, email, password } = req.body || {};
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -72,11 +74,11 @@ router.post("/register", async (req, res) => {
 
     const existed = await pool
       .request()
-      .input("email", sql.NVarChar, String(email).trim())
+      .input("email", sql.NVarChar(100), String(email).trim())
       .query(`
         SELECT user_id
         FROM Users
-        WHERE email = @email
+        WHERE [email] = @email
       `);
 
     if (existed.recordset.length > 0) {
@@ -85,20 +87,27 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const insertResult = await pool
+    await pool
       .request()
-      .input("name", sql.NVarChar, String(name).trim())
-      .input("email", sql.NVarChar, String(email).trim())
-      .input("password", sql.NVarChar, String(password))
-      .input("phone", sql.NVarChar, String(phone))
-      .input("address", sql.NVarChar, String(address))
+      .input("name", sql.NVarChar(100), String(name).trim())
+      .input("email", sql.NVarChar(100), String(email).trim())
+      .input("password", sql.NVarChar(255), String(password))
       .query(`
-        INSERT INTO Users (name, email, password, phone, address)
-        OUTPUT INSERTED.user_id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.address
-        VALUES (@name, @email, @password, @phone, @address)
+        INSERT INTO Users ([name], [email], [password])
+        VALUES (@name, @email, @password)
       `);
 
-    const newUser = insertResult.recordset[0];
+    const userResult = await pool
+      .request()
+      .input("email", sql.NVarChar(100), String(email).trim())
+      .query(`
+        SELECT TOP 1 user_id, [name], [email], [phone], [address]
+        FROM Users
+        WHERE [email] = @email
+        ORDER BY user_id DESC
+      `);
+
+    const newUser = userResult.recordset[0];
 
     return res.json({
       message: "Đăng ký thành công",
@@ -114,9 +123,8 @@ router.post("/register", async (req, res) => {
   } catch (error) {
     console.error("POST /api/register error:", error);
     return res.status(500).json({
-      message: "Lỗi đăng ký tài khoản",
+      message: error?.originalError?.info?.message || error.message || "Lỗi đăng ký tài khoản",
     });
   }
 });
-
 module.exports = router;
