@@ -1,6 +1,15 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router";
-import { ShoppingCart, User, Search, Menu, X, Package, LogOut } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  Search,
+  Menu,
+  X,
+  Package,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -29,13 +38,14 @@ export const Navbar = () => {
   return (
     <header className="bg-white border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 text-2xl font-black text-orange-600 tracking-tighter italic">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-2xl font-black text-orange-600 tracking-tighter italic"
+        >
           <Package className="w-8 h-8" />
           VinSport
         </Link>
 
-        {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8 font-medium">
           {navLinks.map((link) => (
             <Link
@@ -48,9 +58,22 @@ export const Navbar = () => {
               {link.name}
             </Link>
           ))}
+
+          {user?.role === "admin" && (
+            <Link
+              to="/admin/products"
+              className={`hover:text-orange-600 transition-colors flex items-center gap-2 ${
+                location.pathname.startsWith("/admin")
+                  ? "text-orange-600"
+                  : "text-slate-700"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Quản lý sản phẩm
+            </Link>
+          )}
         </nav>
 
-        {/* Actions (Search, Cart, User) */}
         <div className="hidden md:flex items-center gap-4">
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -71,26 +94,37 @@ export const Navbar = () => {
               </span>
             )}
           </Link>
-          
+
           {isAuthenticated ? (
             <div className="flex items-center gap-4 border-l pl-4 ml-2 border-slate-200">
-              <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <div className="text-sm font-bold text-slate-700 flex items-center gap-2">
                 <User className="w-4 h-4 text-orange-600" />
-                Chào, {user?.name}
-              </span>
-              <button onClick={logout} className="text-sm text-slate-500 hover:text-red-600 flex items-center gap-1 font-medium transition-colors">
+                <span>Chào, {user?.name}</span>
+                {user?.role === "admin" && (
+                  <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                    Admin
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={logout}
+                className="text-sm text-slate-500 hover:text-red-600 flex items-center gap-1 font-medium transition-colors"
+              >
                 <LogOut className="w-4 h-4" /> Đăng xuất
               </button>
             </div>
           ) : (
-            <Link to="/login" className="flex items-center gap-2 p-2 text-slate-700 hover:text-orange-600 font-medium">
+            <Link
+              to="/login"
+              className="flex items-center gap-2 p-2 text-slate-700 hover:text-orange-600 font-medium"
+            >
               <User className="w-6 h-6" />
               <span className="text-sm">Đăng nhập</span>
             </Link>
           )}
         </div>
 
-        {/* Mobile Toggle */}
         <div className="flex md:hidden items-center gap-4">
           <Link to="/cart" className="relative p-2 text-slate-700">
             <ShoppingCart className="w-6 h-6" />
@@ -100,13 +134,13 @@ export const Navbar = () => {
               </span>
             )}
           </Link>
+
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2">
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="md:hidden border-t bg-white px-4 py-4 space-y-4">
           <form onSubmit={handleSearch} className="relative mb-4">
@@ -119,6 +153,7 @@ export const Navbar = () => {
             />
             <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           </form>
+
           <nav className="flex flex-col gap-4 font-medium">
             {navLinks.map((link) => (
               <Link
@@ -132,22 +167,53 @@ export const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            
+
+            {user?.role === "admin" && (
+              <Link
+                to="/admin/products"
+                onClick={() => setIsMenuOpen(false)}
+                className={`text-lg flex items-center gap-2 ${
+                  location.pathname.startsWith("/admin")
+                    ? "text-orange-600"
+                    : "text-slate-700"
+                }`}
+              >
+                <ShieldCheck className="w-5 h-5" />
+                Quản lý sản phẩm
+              </Link>
+            )}
+
             <div className="h-px bg-slate-100 my-2"></div>
-            
+
             {isAuthenticated ? (
               <>
                 <div className="text-lg text-orange-600 flex items-center gap-2">
                   <User className="w-5 h-5" />
                   Chào, {user?.name}
+                  {user?.role === "admin" && (
+                    <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                      Admin
+                    </span>
+                  )}
                 </div>
-                <button onClick={() => { logout(); setIsMenuOpen(false); }} className="text-lg text-slate-500 flex items-center gap-2 text-left">
+
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="text-lg text-slate-500 flex items-center gap-2 text-left"
+                >
                   <LogOut className="w-5 h-5" />
                   Đăng xuất
                 </button>
               </>
             ) : (
-              <Link to="/login" onClick={() => setIsMenuOpen(false)} className="text-lg text-slate-700 flex items-center gap-2">
+              <Link
+                to="/login"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-lg text-slate-700 flex items-center gap-2"
+              >
                 <User className="w-5 h-5" />
                 Đăng nhập / Đăng ký
               </Link>

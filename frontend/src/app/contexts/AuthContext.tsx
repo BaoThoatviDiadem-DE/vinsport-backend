@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import api from "../api/api";
 
 type User = {
@@ -7,10 +13,12 @@ type User = {
   email: string;
   phone?: string;
   address?: string;
+  role: string;
 };
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
@@ -25,8 +33,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function normalizeUser(rawUser: any): User {
+  return {
+    id: rawUser?.id,
+    name: rawUser?.name || "Người dùng",
+    email: rawUser?.email || "",
+    phone: rawUser?.phone || "",
+    address: rawUser?.address || "",
+    role: rawUser?.role || "user",
+  };
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("vinsport_user");
@@ -34,33 +54,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (savedUser && savedToken) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        setUser(normalizeUser(parsed));
       } catch {
         localStorage.removeItem("vinsport_user");
         localStorage.removeItem("vinsport_token");
       }
     }
+
+    setIsAuthLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       const response: any = await api.post("/login", { email, password });
 
-      setUser(response.user);
-      localStorage.setItem("vinsport_token", response.token);
-      localStorage.setItem("vinsport_user", JSON.stringify(response.user));
+      if (!response?.user || !response?.token) {
+        throw new Error("Backend login chưa trả đủ user/token");
+      }
 
-      console.log("%c✅ ĐĂNG NHẬP THÀNH CÔNG", "color: green; font-weight: bold;");
-    } catch (error) {
+      const normalizedUser = normalizeUser(response.user);
+
+      setUser(normalizedUser);
+      localStorage.setItem("vinsport_token", response.token);
+      localStorage.setItem("vinsport_user", JSON.stringify(normalizedUser));
+    } catch (error: any) {
       console.error("Lỗi đăng nhập:", error);
 
       if (import.meta.env.VITE_USE_MOCK === "true") {
-        const mockUser = { name: "Khách hàng Demo", email };
+        const mockUser = normalizeUser({
+          name: "Khách hàng Demo",
+          email,
+          role: "user",
+        });
+
         setUser(mockUser);
         localStorage.setItem("vinsport_token", "mock-token");
         localStorage.setItem("vinsport_user", JSON.stringify(mockUser));
       } else {
-        throw new Error("Tài khoản hoặc mật khẩu không chính xác");
+        throw new Error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Tài khoản hoặc mật khẩu không chính xác"
+        );
       }
     }
   };
@@ -81,22 +117,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         address,
       });
 
-      setUser(response.user);
-      localStorage.setItem("vinsport_token", response.token);
-      localStorage.setItem("vinsport_user", JSON.stringify(response.user));
+      if (response?.user && response?.token) {
+        const normalizedUser = normalizeUser(response.user);
 
-      console.log("%c✅ ĐĂNG KÝ THÀNH CÔNG", "color: green; font-weight: bold;");
+        setUser(normalizedUser);
+        localStorage.setItem("vinsport_token", response.token);
+        localStorage.setItem("vinsport_user", JSON.stringify(normalizedUser));
+        return;
+      }
+
+      await login(email, password);
     } catch (error: any) {
       console.error("Lỗi đăng ký:", error);
 
       if (import.meta.env.VITE_USE_MOCK === "true") {
-        const mockUser = { name, email };
+        const mockUser = normalizeUser({
+          name,
+          email,
+          phone,
+          address,
+          role: "user",
+        });
+
         setUser(mockUser);
         localStorage.setItem("vinsport_token", "mock-token");
         localStorage.setItem("vinsport_user", JSON.stringify(mockUser));
       } else {
         throw new Error(
-          error?.response?.data?.message || "Không thể đăng ký tài khoản"
+          error?.response?.data?.message ||
+            error?.message ||
+            "Không thể đăng ký tài khoản"
         );
       }
     }
@@ -110,7 +160,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated: !!user, user, login, register, logout }}
+      value={{
+        isAuthenticated: !!user,
+        isAuthLoading,
+        user,
+        login,
+        register,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>
