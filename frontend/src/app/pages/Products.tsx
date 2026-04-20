@@ -50,14 +50,13 @@ export const Products = () => {
     fetchProducts();
   }, [searchQuery]);
 
-  const categories = useMemo(() => {
-    const values = products
-      .map((product) => product.category)
-      .filter(Boolean)
-      .map((value) => String(value).trim());
+  const categoryGroups: Record<string, string[]> = {
+    "Áo": ["Áo bóng đá", "Áo gym", "Áo khoác thể thao"],
+    "Quần": ["Quần short", "Quần dài thể thao"],
+    "Giày": ["Giày chạy bộ"],
+  };
 
-    return [...new Set(values)];
-  }, [products]);
+  const displayCategories = ["Quần", "Áo", "Giày"];
 
   const brands = useMemo(() => {
     const values = products
@@ -98,8 +97,16 @@ export const Products = () => {
     if (!products || products.length === 0) return [];
 
     let result = products.filter((product) => {
+      const productCategory = String(product.category || "").trim().toLowerCase();
+
+      const mappedCategories = selectedCategory
+        ? (categoryGroups[selectedCategory] || [selectedCategory]).map((item) =>
+            item.toLowerCase()
+          )
+        : [];
+
       const matchCategory = selectedCategory
-        ? product.category?.toLowerCase() === selectedCategory.toLowerCase()
+        ? mappedCategories.includes(productCategory)
         : true;
 
       const matchBrand = selectedBrand
@@ -140,7 +147,7 @@ export const Products = () => {
               Tất cả danh mục
             </button>
 
-            {categories.map((cat) => (
+            {displayCategories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => updateFilter("category", cat)}

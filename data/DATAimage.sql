@@ -50,7 +50,7 @@ INSERT INTO ProductImages (product_id, image_url) VALUES
 (10, N'https://cdn.vuahanghieu.com/unsafe/0x900/left/top/smart/filters:quality(90)/https://admin.vuahanghieu.com/upload/product/2022/02/qua-n-shorts-nike-pro-flex-vent-max-men-s-shorts-beige-cj1957-320-size-m-620f5ced7e1e8-18022022154637.jpg'),
 (10, N'https://link-quan-short-nike-flex-2.jpg');
 
--- 11. Áo khoác Puma Sport
+-- 11. Áo khoác Puma Sport 
 INSERT INTO ProductImages (product_id, image_url) VALUES
 (11, N'https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_2000,h_2000/global/526607/01/mod01/fnd/VNM/fmt/png/%C3%81o-kho%C3%A1c-nam-ch%E1%BA%A1y-b%E1%BB%99-d%E1%BB%87t-VELOCITY'),
 (11, N'https://link-ao-khoac-puma-sport-2.jpg');
@@ -59,3 +59,34 @@ INSERT INTO ProductImages (product_id, image_url) VALUES
 INSERT INTO ProductImages (product_id, image_url) VALUES
 (12, N'https://www.jordan1.vn/wp-content/uploads/2023/09/3-96c1-86a2dfdfda99-reebok-reebok-nano-x2-shoes_19724927_44532787_1000_04878358491745cf84b6a29ff6561f13.png'),
 (12, N'https://link-giay-reebok-nano-2.jpg');
+
+--THEM SAN PHAM
+-- 13. Áo bóng đá Puma Future 2026
+INSERT INTO ProductImages (product_id, image_url) VALUES
+(13, N'https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_2000,h_2000/global/783276/01/fnd/VNM/fmt/png/%C3%81o-Thi-%C4%90%E1%BA%A5u-S%C3%A2n-Nh%C3%A0-B%E1%BB%93-%C4%90%C3%A0o-Nha-2026-Nam-(Authentic)'),
+(13, N'https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_2000,h_2000/global/788140/77/bv/fnd/VNM/fmt/png/%C3%81o-Thi-%C4%90%E1%BA%A5u-Player-S%C3%A2n-Nh%C3%A0-B%E1%BB%93-%C4%90%C3%A0o-Nha-2026-Nam-(Authentic)');
+
+-- 14. Áo gym Nike Dri-FIT Elite
+INSERT INTO ProductImages (product_id, image_url) VALUES
+(14, N'https://sneakerdaily.vn/wp-content/uploads/2024/06/Ao-Nike-Pro-Mens-Dri-FIT-Tight-Short-Sleeve-Fitness-Top-FB7933-451.jpg'),
+(14, N'https://bizweb.dktcdn.net/100/059/568/products/04847f7705-sp-11226184.jpg?v=1662805203677');
+
+-- 15. Quần short Adidas Runner
+INSERT INTO ProductImages (product_id, image_url) VALUES
+(15, N'https://supersports.com.vn/cdn/shop/files/IX6371-1_1200x1200.jpg?v=1706846361'),
+(15, N'https://bizweb.dktcdn.net/thumb/grande/100/340/361/products/quanshort2trong13socowntherund-621e5c3d-08bb-463c-a8cc-4b9d0839325e.jpg?v=1742786119847');
+
+-- 16. Giày chạy Nike Air Zoom
+INSERT INTO ProductImages (product_id, image_url) VALUES
+(16, N'https://authentic-shoes.com/wp-content/uploads/2023/04/992811_01.jpg_c4392c267c8e4807856a504a03bb3f22.png'),
+(16, N'https://link-giay-chay-nike-air-zoom-2.jpg');
+
+-- 17. Áo khoác Under Armour Storm
+INSERT INTO ProductImages (product_id, image_url) VALUES
+(17, N'https://supersports.com.vn/cdn/shop/files/1376797-432-3_1024x1024.jpg?v=1775014009'),
+(17, N'https://link-ao-khoac-under-armour-storm-2.jpg');
+
+-- 18. Quần dài Puma Training Pro
+INSERT INTO ProductImages (product_id, image_url) VALUES
+(18, N'https://images.puma.com/image/upload/f_auto,q_auto,b_rgb:fafafa,w_2000,h_2000/global/526592/01/mod01/fnd/VNM/fmt/png/Qu%E1%BA%A7n-d%C3%A0i-ch%E1%BA%A1y-b%E1%BB%99-VELOCITY-c%E1%BA%A1p-su%C3%B4ng-cho-n%E1%BB%AF'),
+(18, N'https://link-quan-dai-puma-training-pro-2.jpg');
