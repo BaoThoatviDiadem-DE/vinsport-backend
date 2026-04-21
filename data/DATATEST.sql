@@ -217,10 +217,10 @@ VALUES
 INSERT INTO Payments (order_id, method, status)
 VALUES 
 (1, N'COD', N'Paid'),
-(2, N'Momo', N'Paid'),
+(2, N'Bank', N'Paid'),
 (3, N'Bank', N'Pending'),
 (4, N'COD', N'Paid'),
-(5, N'Momo', N'Failed');
+(5, N'Bank', N'Failed');
 
 --14. SHIPPING
 INSERT INTO Shipping (order_id, address, status)

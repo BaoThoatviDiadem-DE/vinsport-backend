@@ -209,7 +209,7 @@ CREATE TABLE Payments (
 
     FOREIGN KEY (order_id) REFERENCES Orders(order_id) ON DELETE CASCADE,
 
-    CHECK (method IN (N'COD', N'Bank', N'Momo'))
+    CHECK (method IN (N'COD', N'Bank'))
 );
 
 -- ======================
