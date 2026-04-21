@@ -3,6 +3,7 @@ import api from "../api/api";
 
 type UserItem = {
   id: number | string;
+  user_id?: number | string;
   name: string;
   email: string;
   phone?: string;
@@ -10,16 +11,41 @@ type UserItem = {
   role: "admin" | "user";
 };
 
+function toArray(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.users)) return data.users;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function normalizeUser(item: any): UserItem {
+  return {
+    id: item?.id ?? item?.user_id,
+    user_id: item?.user_id ?? item?.id,
+    name: item?.name || "",
+    email: item?.email || "",
+    phone: item?.phone || "",
+    address: item?.address || "",
+    role: item?.role === "admin" ? "admin" : "user",
+  };
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | string | null>(null);
+  const [searchEmail, setSearchEmail] = useState("");
 
-  const loadUsers = async () => {
+  const loadUsers = async (email = "") => {
     try {
       setIsLoading(true);
-      const data = await api.get("/admin/users");
-      setUsers(Array.isArray(data) ? data : []);
+
+      const query = email.trim()
+        ? `/admin/users?email=${encodeURIComponent(email.trim())}`
+        : "/admin/users";
+
+      const data = await api.get(query);
+      setUsers(toArray(data).map(normalizeUser));
     } catch (error) {
       console.error("Lỗi tải user:", error);
       alert("Không tải được danh sách người dùng");
@@ -32,20 +58,50 @@ export default function AdminUsers() {
     loadUsers();
   }, []);
 
-  const handleRoleChange = (id: number | string, role: "admin" | "user") => {
+  const handleFieldChange = (
+    id: number | string,
+    field: keyof UserItem,
+    value: string
+  ) => {
     setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, role } : u))
+      prev.map((u) =>
+        u.id === id
+          ? {
+              ...u,
+              [field]: field === "role" ? (value as "admin" | "user") : value,
+            }
+          : u
+      )
     );
   };
 
-  const handleSaveRole = async (user: UserItem) => {
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await loadUsers(searchEmail);
+  };
+
+  const handleResetSearch = async () => {
+    setSearchEmail("");
+    await loadUsers("");
+  };
+
+  const handleSaveUser = async (user: UserItem) => {
     try {
       setSavingId(user.id);
-      await api.put(`/admin/users/${user.id}/role`, { role: user.role });
-      alert("Cập nhật role thành công");
+
+      await api.put(`/admin/users/${user.id}`, {
+        name: user.name,
+        email: user.email,
+        phone: user.phone || "",
+        address: user.address || "",
+        role: user.role,
+      });
+
+      alert("Cập nhật người dùng thành công");
+      await loadUsers(searchEmail);
     } catch (error: any) {
-      console.error("Lỗi cập nhật role:", error);
-      alert(error?.response?.data?.message || "Không cập nhật được role");
+      console.error("Lỗi cập nhật người dùng:", error);
+      alert(error?.response?.data?.message || "Không cập nhật được người dùng");
     } finally {
       setSavingId(null);
     }
@@ -56,18 +112,50 @@ export default function AdminUsers() {
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Quản lý người dùng</h1>
         <p className="text-slate-600 mt-2">
-          Chỉ admin mới có quyền thay đổi vai trò tài khoản.
+          Admin có thể tìm kiếm theo email và chỉnh sửa trực tiếp thông tin tài khoản.
         </p>
       </div>
 
+      <form
+        onSubmit={handleSearch}
+        className="bg-white rounded-2xl shadow-sm border p-5 flex flex-col md:flex-row gap-3"
+      >
+        <input
+          type="text"
+          value={searchEmail}
+          onChange={(e) => setSearchEmail(e.target.value)}
+          placeholder="Tìm kiếm theo email..."
+          className="flex-1 border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+        />
+
+        <button
+          type="submit"
+          className="px-5 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
+        >
+          Tìm kiếm
+        </button>
+
+        <button
+          type="button"
+          onClick={handleResetSearch}
+          className="px-5 py-3 rounded-xl bg-slate-200 text-slate-900 hover:bg-slate-300"
+        >
+          Đặt lại
+        </button>
+      </form>
+
       <div className="bg-white rounded-2xl shadow-sm border p-5">
         {isLoading ? (
-          <div className="py-10 text-center text-slate-500">Đang tải người dùng...</div>
+          <div className="py-10 text-center text-slate-500">
+            Đang tải người dùng...
+          </div>
         ) : users.length === 0 ? (
-          <div className="py-10 text-center text-slate-500">Không có người dùng nào.</div>
+          <div className="py-10 text-center text-slate-500">
+            Không có người dùng nào.
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse">
+            <table className="w-full min-w-[1100px] border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-left">
                   <th className="p-3 border-b">ID</th>
@@ -79,32 +167,68 @@ export default function AdminUsers() {
                   <th className="p-3 border-b">Thao tác</th>
                 </tr>
               </thead>
+
               <tbody>
                 {users.map((user) => (
-                  <tr key={String(user.id)} className="hover:bg-slate-50">
-                    <td className="p-3 border-b">{user.id}</td>
-                    <td className="p-3 border-b">{user.name}</td>
-                    <td className="p-3 border-b">{user.email}</td>
-                    <td className="p-3 border-b">{user.phone || "-"}</td>
-                    <td className="p-3 border-b">{user.address || "-"}</td>
-                    <td className="p-3 border-b">
+                  <tr key={String(user.id)} className="hover:bg-slate-50 align-top">
+                    <td className="p-3 border-b whitespace-nowrap">{user.id}</td>
+
+                    <td className="p-3 border-b min-w-[180px]">
+                      <input
+                        value={user.name}
+                        onChange={(e) =>
+                          handleFieldChange(user.id, "name", e.target.value)
+                        }
+                        className="w-full border rounded-lg px-3 py-2"
+                      />
+                    </td>
+
+                    <td className="p-3 border-b min-w-[240px]">
+                      <input
+                        value={user.email}
+                        onChange={(e) =>
+                          handleFieldChange(user.id, "email", e.target.value)
+                        }
+                        className="w-full border rounded-lg px-3 py-2"
+                      />
+                    </td>
+
+                    <td className="p-3 border-b min-w-[160px]">
+                      <input
+                        value={user.phone || ""}
+                        onChange={(e) =>
+                          handleFieldChange(user.id, "phone", e.target.value)
+                        }
+                        className="w-full border rounded-lg px-3 py-2"
+                      />
+                    </td>
+
+                    <td className="p-3 border-b min-w-[220px]">
+                      <input
+                        value={user.address || ""}
+                        onChange={(e) =>
+                          handleFieldChange(user.id, "address", e.target.value)
+                        }
+                        className="w-full border rounded-lg px-3 py-2"
+                      />
+                    </td>
+
+                    <td className="p-3 border-b min-w-[140px]">
                       <select
                         value={user.role}
                         onChange={(e) =>
-                          handleRoleChange(
-                            user.id,
-                            e.target.value as "admin" | "user"
-                          )
+                          handleFieldChange(user.id, "role", e.target.value)
                         }
-                        className="border rounded-lg px-3 py-2"
+                        className="w-full border rounded-lg px-3 py-2"
                       >
                         <option value="user">user</option>
                         <option value="admin">admin</option>
                       </select>
                     </td>
-                    <td className="p-3 border-b">
+
+                    <td className="p-3 border-b whitespace-nowrap">
                       <button
-                        onClick={() => handleSaveRole(user)}
+                        onClick={() => handleSaveUser(user)}
                         disabled={savingId === user.id}
                         className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60"
                       >

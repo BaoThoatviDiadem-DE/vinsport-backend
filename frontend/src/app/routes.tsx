@@ -23,7 +23,6 @@ export const router = createBrowserRouter([
       { path: "checkout", Component: Checkout },
       { path: "tracking", Component: OrderTracking },
       { path: "login", Component: Auth },
-
       {
         path: "admin/products",
         element: (
