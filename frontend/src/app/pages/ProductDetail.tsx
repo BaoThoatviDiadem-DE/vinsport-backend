@@ -1,10 +1,132 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Check, Truck, Shield, RotateCcw, ChevronLeft, Minus, Plus, Loader2 } from "lucide-react";
+import {
+  Check,
+  Truck,
+  Shield,
+  RotateCcw,
+  ChevronLeft,
+  Minus,
+  Plus,
+  Loader2,
+  X,
+} from "lucide-react";
 import api from "../api/api";
 import { MOCK_PRODUCTS, formatPrice } from "../data/mockData";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
+
+type GuideUnit = "cm" | "inch";
+type GuideLabel = "Ngực" | "Eo" | "Hông";
+
+type ProductColor = {
+  name: string;
+  hex?: string;
+};
+
+type ProductVariant = {
+  size?: string;
+  color?: string;
+  hex?: string;
+  price?: number;
+  stock?: number;
+};
+
+type Product = {
+  id?: number | string;
+  name?: string;
+  brand?: string;
+  description?: string;
+  price?: number;
+  stock?: number | null;
+  image?: string;
+  images?: string[];
+  sizes?: string[] | string | null;
+  colors?: ProductColor[];
+  variants?: ProductVariant[];
+};
+
+type SizeGuideRow = Record<string, string>;
+type SizeGuideTable = Record<GuideLabel, SizeGuideRow>;
+type SizeGuideData = Record<GuideUnit, SizeGuideTable>;
+
+const sizeGuideData: SizeGuideData = {
+  cm: {
+    Ngực: {
+      XS: "83 - 86",
+      S: "87 - 92",
+      M: "93 - 100",
+      L: "101 - 108",
+      XL: "109 - 118",
+      "2XL": "119 - 130",
+      "3XL": "131 - 142",
+    },
+    Eo: {
+      XS: "71 - 74",
+      S: "75 - 80",
+      M: "81 - 88",
+      L: "89 - 96",
+      XL: "97 - 106",
+      "2XL": "107 - 119",
+      "3XL": "120 - 132",
+    },
+    Hông: {
+      XS: "82 - 85",
+      S: "86 - 91",
+      M: "92 - 99",
+      L: "100 - 107",
+      XL: "108 - 116",
+      "2XL": "117 - 125",
+      "3XL": "126 - 134",
+    },
+  },
+  inch: {
+    Ngực: {
+      XS: "32.7 - 33.9",
+      S: "34.3 - 36.2",
+      M: "36.6 - 39.4",
+      L: "39.8 - 42.5",
+      XL: "42.9 - 46.5",
+      "2XL": "46.9 - 51.2",
+      "3XL": "51.6 - 55.9",
+    },
+    Eo: {
+      XS: "28.0 - 29.1",
+      S: "29.5 - 31.5",
+      M: "31.9 - 34.6",
+      L: "35.0 - 37.8",
+      XL: "38.2 - 41.7",
+      "2XL": "42.1 - 46.9",
+      "3XL": "47.2 - 52.0",
+    },
+    Hông: {
+      XS: "32.3 - 33.5",
+      S: "33.9 - 35.8",
+      M: "36.2 - 39.0",
+      L: "39.4 - 42.1",
+      XL: "42.5 - 45.7",
+      "2XL": "46.1 - 49.2",
+      "3XL": "49.6 - 52.8",
+    },
+  },
+};
+
+const defaultGuideSizes = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+
+const parseSizes = (sizes: unknown): string[] => {
+  if (Array.isArray(sizes)) {
+    return sizes.map((s) => String(s).trim()).filter(Boolean);
+  }
+
+  if (typeof sizes === "string") {
+    return sizes
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
 
 export const ProductDetail = () => {
   const { id } = useParams();
@@ -12,7 +134,7 @@ export const ProductDetail = () => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
 
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string>("");
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -20,36 +142,45 @@ export const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [guideUnit, setGuideUnit] = useState<GuideUnit>("cm");
+
   useEffect(() => {
     const fetchProductDetail = async () => {
       try {
         setIsLoading(true);
 
-        const data: any = await api.get(`/products/${id}`);
-        console.log(`%c✅ DETAIL: PRODUCT ${id} LOADED`, "color: green; font-weight: bold;");
-
+        const data: Product = await api.get(`/products/${id}`);
         setProduct(data);
         setMainImage(data.images?.[0] || data.image || "");
 
+        const normalizedSizes = parseSizes(data.sizes);
+
         if (data.variants && data.variants.length > 0) {
           const firstVariant = data.variants[0];
-          setSelectedSize(firstVariant.size || data.sizes?.[0] || "");
+          setSelectedSize(firstVariant.size || normalizedSizes[0] || "");
           setSelectedColor(firstVariant.color || data.colors?.[0]?.name || "");
         } else {
-          setSelectedSize(data.sizes?.[0] || "");
+          setSelectedSize(normalizedSizes[0] || "");
           setSelectedColor(data.colors?.[0]?.name || "");
         }
       } catch (error) {
-        console.error(`%c❌ DETAIL: FAILED TO LOAD PRODUCT ${id}`, "color: red; font-weight: bold;");
+        console.error("Không tải được chi tiết sản phẩm:", error);
 
-        if ((import.meta as any).env?.VITE_USE_MOCK === "true") {
-          const fallback = MOCK_PRODUCTS.find((p) => p.id === id);
-          setProduct(fallback);
+        if (import.meta.env.VITE_USE_MOCK === "true") {
+          const fallback = MOCK_PRODUCTS.find((p: any) => String(p.id) === String(id)) as
+            | Product
+            | undefined;
 
           if (fallback) {
+            setProduct(fallback);
             setMainImage(fallback.images?.[0] || fallback.image || "");
-            setSelectedSize(fallback.sizes?.[0] || "");
+
+            const fallbackSizes = parseSizes(fallback.sizes);
+            setSelectedSize(fallbackSizes[0] || "");
             setSelectedColor(fallback.colors?.[0]?.name || "");
+          } else {
+            setProduct(null);
           }
         } else {
           setProduct(null);
@@ -62,37 +193,61 @@ export const ProductDetail = () => {
     fetchProductDetail();
   }, [id]);
 
-  const allImages = useMemo(() => {
+  useEffect(() => {
+    document.body.style.overflow = isSizeGuideOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSizeGuideOpen]);
+
+  const allImages = useMemo<string[]>(() => {
     if (!product) return [];
-    return product.images && product.images.length > 0 ? product.images : [product.image].filter(Boolean);
+    return product.images && product.images.length > 0
+      ? product.images
+      : [product.image].filter(Boolean) as string[];
   }, [product]);
 
-  const availableSizes = useMemo(() => {
+  const normalizedSizes = useMemo<string[]>(() => {
+    if (!product) return [];
+    return parseSizes(product.sizes);
+  }, [product]);
+
+  const availableSizes = useMemo<string[]>(() => {
     if (!product) return [];
 
     if (product.variants && product.variants.length > 0) {
       const filtered = selectedColor
-        ? product.variants.filter((variant: any) => variant.color === selectedColor)
+        ? product.variants.filter(
+            (variant: ProductVariant) => variant.color === selectedColor
+          )
         : product.variants;
 
-      return [...new Set(filtered.map((variant: any) => variant.size).filter(Boolean))];
+      return [
+        ...new Set(
+          filtered
+            .map((variant: ProductVariant) => variant.size)
+            .filter((size): size is string => Boolean(size))
+        ),
+      ];
     }
 
-    return product.sizes || [];
-  }, [product, selectedColor]);
+    return normalizedSizes;
+  }, [product, selectedColor, normalizedSizes]);
 
-  const availableColors = useMemo(() => {
+  const availableColors = useMemo<ProductColor[]>(() => {
     if (!product) return [];
 
     if (product.variants && product.variants.length > 0) {
       const filtered = selectedSize
-        ? product.variants.filter((variant: any) => variant.size === selectedSize)
+        ? product.variants.filter(
+            (variant: ProductVariant) => variant.size === selectedSize
+          )
         : product.variants;
 
-      const unique = new Map();
+      const unique = new Map<string, ProductColor>();
 
-      filtered.forEach((variant: any) => {
-        if (!unique.has(variant.color)) {
+      filtered.forEach((variant: ProductVariant) => {
+        if (variant.color && !unique.has(variant.color)) {
           unique.set(variant.color, {
             name: variant.color,
             hex: variant.hex || "#000000",
@@ -106,25 +261,28 @@ export const ProductDetail = () => {
     return product.colors || [];
   }, [product, selectedSize]);
 
-  const currentVariant = useMemo(() => {
+  const currentVariant = useMemo<ProductVariant | null>(() => {
     if (!product?.variants || product.variants.length === 0) return null;
 
     return (
       product.variants.find(
-        (variant: any) =>
+        (variant: ProductVariant) =>
           variant.size === selectedSize && variant.color === selectedColor
       ) || null
     );
   }, [product, selectedSize, selectedColor]);
 
   const displayPrice = currentVariant?.price ?? product?.price ?? 0;
-  const stock = currentVariant?.stock ?? null;
+  const stock = currentVariant?.stock ?? product?.stock ?? null;
+
+  const guideSizes = useMemo<string[]>(() => {
+    return availableSizes.length > 0 ? availableSizes : defaultGuideSizes;
+  }, [availableSizes]);
 
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
-    const hasSelectedSize = availableSizes.includes(selectedSize);
-    if (!hasSelectedSize && availableSizes.length > 0) {
+    if (!availableSizes.includes(selectedSize) && availableSizes.length > 0) {
       setSelectedSize(availableSizes[0]);
     }
   }, [availableSizes, selectedSize, product]);
@@ -132,10 +290,9 @@ export const ProductDetail = () => {
   useEffect(() => {
     if (!product?.variants || product.variants.length === 0) return;
 
-    const colorNames = availableColors.map((color: any) => color.name);
-    const hasSelectedColor = colorNames.includes(selectedColor);
+    const colorNames = availableColors.map((color: ProductColor) => color.name);
 
-    if (!hasSelectedColor && availableColors.length > 0) {
+    if (!colorNames.includes(selectedColor) && availableColors.length > 0) {
       setSelectedColor(availableColors[0].name);
     }
   }, [availableColors, selectedColor, product]);
@@ -180,17 +337,17 @@ export const ProductDetail = () => {
       return;
     }
 
-    if (product.sizes?.length > 0 && !selectedSize) {
+    if (availableSizes.length > 0 && !selectedSize) {
       alert("Vui lòng chọn kích cỡ!");
       return;
     }
 
-    if (product.colors?.length > 0 && !selectedColor) {
+    if (availableColors.length > 0 && !selectedColor) {
       alert("Vui lòng chọn màu sắc!");
       return;
     }
 
-    if (product.variants?.length > 0 && !currentVariant) {
+    if (product.variants?.length && !currentVariant) {
       alert("Biến thể sản phẩm này hiện không khả dụng!");
       return;
     }
@@ -205,198 +362,352 @@ export const ProductDetail = () => {
       return;
     }
 
-    addToCart(
-      {
-        ...product,
-        price: displayPrice,
-      },
-      selectedSize,
-      selectedColor,
-      quantity
-    );
+   addToCart(
+  {
+    id: String(product.id ?? ""),
+    name: product.name ?? "",
+    price: displayPrice,
+    brand: product.brand ?? "",
+    description: product.description ?? "",
+    image: product.image ?? mainImage ?? "",
+    images: allImages,
+    sizes: normalizedSizes,
+    colors: product.colors ?? [],
+    variants: (product.variants ?? []).map((variant) => ({
+      variantId: Number((variant as any).variantId ?? (variant as any).id ?? 0),
+      size: String(variant.size ?? ""),
+      color: String(variant.color ?? ""),
+      hex: variant.hex ?? undefined,
+      price: Number(variant.price ?? displayPrice ?? 0),
+      stock: Number(variant.stock ?? 0),
+    })),
+  },
+  selectedSize,
+  selectedColor,
+  quantity
+);
 
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-500 hover:text-orange-600 mb-6 font-medium"
-      >
-        <ChevronLeft className="w-5 h-5" /> Quay lại
-      </button>
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-slate-500 hover:text-orange-600 mb-6 font-medium"
+        >
+          <ChevronLeft className="w-5 h-5" /> Quay lại
+        </button>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="p-6 md:p-8 flex flex-col gap-4">
-            <div className="aspect-square bg-slate-50 rounded-2xl relative overflow-hidden flex-grow">
-              <img
-                src={mainImage || product.image}
-                alt={product.name}
-                className="w-full h-full object-contain mix-blend-multiply"
-              />
-            </div>
-
-            {allImages.length > 1 && (
-              <div className="flex gap-4 overflow-x-auto pb-2 snap-x">
-                {allImages.map((img: string, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setMainImage(img)}
-                    className={`w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                      mainImage === img
-                        ? "border-orange-600 opacity-100"
-                        : "border-transparent opacity-60 hover:opacity-100"
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="p-6 md:p-8 flex flex-col gap-4">
+              <div className="aspect-square bg-slate-50 rounded-2xl relative overflow-hidden flex-grow">
+                <img
+                  src={mainImage || product.image}
+                  alt={product.name || "product"}
+                  className="w-full h-full object-contain mix-blend-multiply"
+                />
               </div>
-            )}
-          </div>
 
-          <div className="p-8 md:p-12 flex flex-col justify-center">
-            <div className="mb-2 text-sm font-bold text-slate-400 uppercase tracking-widest">
-              {product.brand}
-            </div>
-
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">
-              {product.name}
-            </h1>
-
-            <div className="flex items-end gap-4 mb-3">
-              <span className="text-3xl font-bold text-orange-600">
-                {formatPrice(displayPrice)}
-              </span>
-            </div>
-
-            {stock !== null && (
-              <div className="mb-6">
-                <span
-                  className={`text-sm font-medium ${
-                    stock > 0 ? "text-emerald-600" : "text-red-500"
-                  }`}
-                >
-                  {stock > 0 ? `Còn ${stock} sản phẩm` : "Hết hàng"}
-                </span>
-              </div>
-            )}
-
-            <p className="text-slate-600 mb-8 leading-relaxed">{product.description}</p>
-
-            {availableColors && availableColors.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-slate-900 mb-3">
-                  Màu sắc: {selectedColor}
-                </h3>
-                <div className="flex items-center gap-3">
-                  {availableColors.map((color: any, index: number) => (
+              {allImages.length > 1 && (
+                <div className="flex gap-4 overflow-x-auto pb-2 snap-x">
+                  {allImages.map((img: string, idx: number) => (
                     <button
-                      key={index}
-                      onClick={() => setSelectedColor(color.name)}
-                      className={`w-10 h-10 rounded-full border-2 focus:outline-none transition-all ${
-                        selectedColor === color.name
-                          ? "border-orange-600 ring-2 ring-offset-2 ring-orange-100"
-                          : "border-slate-200"
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {availableSizes && availableSizes.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-slate-900 mb-3">
-                  Kích cỡ (Size):
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {availableSizes.map((size: string, index: number) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-2 min-w-[3rem] text-sm font-medium rounded-lg border transition-all ${
-                        selectedSize === size
-                          ? "bg-slate-900 text-white border-slate-900"
-                          : "bg-white text-slate-700 border-slate-200 hover:border-orange-600 hover:text-orange-600"
+                      key={idx}
+                      onClick={() => setMainImage(img)}
+                      className={`w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                        mainImage === img
+                          ? "border-orange-600 opacity-100"
+                          : "border-transparent opacity-60 hover:opacity-100"
                       }`}
                     >
-                      {size}
+                      <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-4 items-center mt-4 mb-8">
-              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1 w-full sm:w-auto justify-between">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-12 h-12 flex items-center justify-center text-slate-500 hover:text-orange-600 transition-colors"
-                >
-                  <Minus className="w-5 h-5" />
-                </button>
-
-                <span className="w-12 text-center font-bold text-slate-900">{quantity}</span>
-
-                <button
-                  onClick={() =>
-                    setQuantity((prev) => {
-                      if (stock !== null) return Math.min(stock || 1, prev + 1);
-                      return prev + 1;
-                    })
-                  }
-                  className="w-12 h-12 flex items-center justify-center text-slate-500 hover:text-orange-600 transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
-
-              <button
-                onClick={handleAddToCart}
-                disabled={stock !== null && stock <= 0}
-                className={`flex-grow w-full flex items-center justify-center gap-2 py-3 px-8 rounded-lg font-bold text-lg transition-all ${
-                  added
-                    ? "bg-green-500 text-white"
-                    : stock !== null && stock <= 0
-                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                    : "bg-orange-600 text-white hover:bg-orange-700 shadow-lg shadow-orange-200"
-                }`}
-              >
-                {added ? (
-                  <>
-                    <Check className="w-6 h-6" /> Đã thêm vào giỏ
-                  </>
-                ) : stock !== null && stock <= 0 ? (
-                  "Hết hàng"
-                ) : (
-                  "Thêm vào giỏ hàng"
-                )}
-              </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-slate-100">
-              <div className="flex items-center gap-3 text-slate-600 text-sm">
-                <Truck className="w-5 h-5 text-orange-500" />
-                Giao hàng miễn phí
+            <div className="p-8 md:p-12 flex flex-col justify-center">
+              <div className="mb-2 text-sm font-bold text-slate-400 uppercase tracking-widest">
+                {product.brand}
               </div>
-              <div className="flex items-center gap-3 text-slate-600 text-sm">
-                <Shield className="w-5 h-5 text-orange-500" />
-                Bảo hành chính hãng 1 năm
+
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">
+                {product.name}
+              </h1>
+
+              <div className="flex items-end gap-4 mb-3">
+                <span className="text-3xl font-bold text-orange-600">
+                  {formatPrice(displayPrice)}
+                </span>
               </div>
-              <div className="flex items-center gap-3 text-slate-600 text-sm">
-                <RotateCcw className="w-5 h-5 text-orange-500" />
-                Đổi trả trong vòng 30 ngày
+
+              {stock !== null && (
+                <div className="mb-6">
+                  <span
+                    className={`text-sm font-medium ${
+                      stock > 0 ? "text-emerald-600" : "text-red-500"
+                    }`}
+                  >
+                    {stock > 0 ? `Còn ${stock} sản phẩm` : "Hết hàng"}
+                  </span>
+                </div>
+              )}
+
+              <p className="text-slate-600 mb-8 leading-relaxed">
+                {product.description}
+              </p>
+
+              {availableColors.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-slate-900 mb-3">
+                    Màu sắc: {selectedColor}
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    {availableColors.map((color: ProductColor, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedColor(color.name)}
+                        className={`w-10 h-10 rounded-full border-2 focus:outline-none transition-all ${
+                          selectedColor === color.name
+                            ? "border-orange-600 ring-2 ring-offset-2 ring-orange-100"
+                            : "border-slate-200"
+                        }`}
+                        style={{ backgroundColor: color.hex || "#000000" }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {availableSizes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-3">
+                    Kích cỡ
+                  </h3>
+
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    {availableSizes.map((size: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-4 py-3 min-w-[3rem] text-sm font-medium border transition-all ${
+                          selectedSize === size
+                            ? "bg-slate-900 text-white border-slate-900"
+                            : "bg-slate-100 text-slate-700 border-slate-200 hover:border-orange-600 hover:text-orange-600"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSizeGuideOpen(true)}
+                    className="mt-4 text-sm font-semibold underline underline-offset-2 text-slate-800 hover:text-orange-600"
+                  >
+                    Hướng dẫn chọn kích cỡ
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-4 items-center mt-4 mb-8">
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1 w-full sm:w-auto justify-between">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-12 h-12 flex items-center justify-center text-slate-500 hover:text-orange-600 transition-colors"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </button>
+
+                  <span className="w-12 text-center font-bold text-slate-900">
+                    {quantity}
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setQuantity((prev) => {
+                        if (stock !== null) return Math.min(stock || 1, prev + 1);
+                        return prev + 1;
+                      })
+                    }
+                    className="w-12 h-12 flex items-center justify-center text-slate-500 hover:text-orange-600 transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleAddToCart}
+                  disabled={stock !== null && stock <= 0}
+                  className={`flex-grow w-full flex items-center justify-center gap-2 py-3 px-8 rounded-lg font-bold text-lg transition-all ${
+                    added
+                      ? "bg-green-500 text-white"
+                      : stock !== null && stock <= 0
+                      ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                      : "bg-orange-600 text-white hover:bg-orange-700 shadow-lg shadow-orange-200"
+                  }`}
+                >
+                  {added ? (
+                    <>
+                      <Check className="w-6 h-6" /> Đã thêm vào giỏ
+                    </>
+                  ) : stock !== null && stock <= 0 ? (
+                    "Hết hàng"
+                  ) : (
+                    "Thêm vào giỏ hàng"
+                  )}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-slate-100">
+                <div className="flex items-center gap-3 text-slate-600 text-sm">
+                  <Truck className="w-5 h-5 text-orange-500" />
+                  Giao hàng miễn phí
+                </div>
+                <div className="flex items-center gap-3 text-slate-600 text-sm">
+                  <Shield className="w-5 h-5 text-orange-500" />
+                  Bảo hành chính hãng 1 năm
+                </div>
+                <div className="flex items-center gap-3 text-slate-600 text-sm">
+                  <RotateCcw className="w-5 h-5 text-orange-500" />
+                  Đổi trả trong vòng 30 ngày
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <div
+        className={`fixed inset-0 z-50 transition-all ${
+          isSizeGuideOpen ? "pointer-events-auto" : "pointer-events-none"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setIsSizeGuideOpen(false)}
+          className={`absolute inset-0 bg-black/40 transition-opacity ${
+            isSizeGuideOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        <div
+          className={`absolute top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl transition-transform duration-300 overflow-y-auto ${
+            isSizeGuideOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="sticky top-0 z-10 bg-white border-b px-6 py-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-black uppercase tracking-[0.2em] text-slate-900">
+                Hướng dẫn chọn kích cỡ
+              </h2>
+              <p className="text-sm text-slate-500 mt-2">
+                Chọn đơn vị và đối chiếu theo số đo cơ thể để chọn size phù hợp.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsSizeGuideOpen(false)}
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="p-6">
+            <h3 className="text-xl font-bold uppercase tracking-[0.15em] mb-6">
+              Kích cỡ áo / quần
+            </h3>
+
+            <div className="inline-flex border border-slate-200 mb-6">
+              <button
+                type="button"
+                onClick={() => setGuideUnit("inch")}
+                className={`px-5 py-3 font-medium ${
+                  guideUnit === "inch"
+                    ? "bg-white text-slate-900 border-b-2 border-slate-900"
+                    : "bg-slate-50 text-slate-500"
+                }`}
+              >
+                Inch
+              </button>
+              <button
+                type="button"
+                onClick={() => setGuideUnit("cm")}
+                className={`px-5 py-3 font-medium ${
+                  guideUnit === "cm"
+                    ? "bg-white text-slate-900 border-b-2 border-slate-900"
+                    : "bg-slate-50 text-slate-500"
+                }`}
+              >
+                cm
+              </button>
+            </div>
+
+            <div className="overflow-x-auto border">
+              <table className="min-w-[900px] w-full border-collapse">
+                <thead>
+                  <tr className="bg-black text-white">
+                    <th className="px-6 py-4 text-left text-sm font-bold border-r border-slate-700">
+                      Nhãn sản phẩm
+                    </th>
+                    {guideSizes.map((size: string) => (
+                      <th
+                        key={size}
+                        className="px-6 py-4 text-center text-sm font-bold whitespace-nowrap"
+                      >
+                        {size}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["Ngực", "Eo", "Hông"] as GuideLabel[]).map((label: GuideLabel) => (
+                    <tr key={label} className="border-t">
+                      <td className="px-6 py-6 font-semibold text-slate-900 border-r bg-white whitespace-nowrap">
+                        {label}
+                      </td>
+                      {guideSizes.map((size: string) => (
+                        <td
+                          key={`${label}-${size}`}
+                          className="px-6 py-6 text-center text-slate-700 whitespace-nowrap"
+                        >
+                          {sizeGuideData[guideUnit][label][size]
+                            ? `${sizeGuideData[guideUnit][label][size]} ${guideUnit}`
+                            : "-"}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-sm text-slate-500 mt-4">
+              Cuộn ngang để xem đầy đủ nếu màn hình nhỏ.
+            </p>
+
+            <div className="mt-8 bg-slate-50 rounded-xl p-5">
+              <h4 className="font-bold text-slate-900 mb-3">Mẹo chọn size</h4>
+              <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
+                <li>Đo ngực, eo, hông sát cơ thể nhưng không siết quá chặt.</li>
+                <li>Nếu số đo nằm giữa 2 size, ưu tiên size lớn hơn để mặc thoải mái.</li>
+                <li>
+                  Với đồ thể thao form ôm, chọn đúng size; với form rộng, có thể tăng 1 size.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };

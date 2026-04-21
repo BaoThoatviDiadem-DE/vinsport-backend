@@ -15,32 +15,27 @@ export const Footer = () => {
             VinSport là hệ thống cửa hàng bán lẻ đồ thể thao uy tín hàng đầu, cung cấp các sản phẩm chính hãng từ Nike, Adidas, Puma...
           </p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-white transition-colors"><Facebook className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
+           <a href="https://www.facebook.com/cun0108" target="_blank" rel="noopener noreferrer"><Facebook className="w-5 h-5" /></a>
+            <a href="https://www.instagram.com/ngdng_1402/" target="_blank" rel="noopener noreferrer"><Instagram className="w-5 h-5" /></a>
           </div>
         </div>
-        
+
         <div>
           <h3 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Sản phẩm</h3>
           <ul className="space-y-2 text-sm">
             <li><Link to="/products?category=Giày" className="hover:text-white transition-colors">Giày thể thao</Link></li>
-            <li><Link to="/products?category=Áo" className="hover:text-white transition-colors">Quần áo thể thao</Link></li>
-            <li><Link to="/products?category=Bóng" className="hover:text-white transition-colors">Bóng đá / Bóng rổ</Link></li>
-            <li><Link to="/products?category=Phụ kiện" className="hover:text-white transition-colors">Phụ kiện</Link></li>
+            <li><Link to="/products?category=Áo" className="hover:text-white transition-colors">Áo thể thao</Link></li>
           </ul>
         </div>
-        
+
         <div>
           <h3 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Hỗ trợ khách hàng</h3>
           <ul className="space-y-2 text-sm">
             <li><Link to="/tracking" className="hover:text-white transition-colors">Theo dõi đơn hàng</Link></li>
-            <li><a href="#" className="hover:text-white transition-colors">Chính sách đổi trả</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Hướng dẫn chọn size</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Câu hỏi thường gặp</a></li>
           </ul>
         </div>
-        
+
         <div>
           <h3 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Liên hệ</h3>
           <ul className="space-y-2 text-sm text-slate-400">
