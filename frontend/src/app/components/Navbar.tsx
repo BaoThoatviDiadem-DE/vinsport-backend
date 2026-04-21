@@ -10,6 +10,7 @@ import {
   LogOut,
   ShieldCheck,
   Users,
+  ClipboardList,
 } from "lucide-react";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -84,6 +85,18 @@ export const Navbar = () => {
               >
                 <Users className="w-4 h-4" />
                 Quản lý người dùng
+              </Link>
+
+              <Link
+                to="/admin/orders"
+                className={`hover:text-orange-600 transition-colors flex items-center gap-2 ${
+                  location.pathname.startsWith("/admin/orders")
+                    ? "text-orange-600"
+                    : "text-slate-700"
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                Quản lý đơn hàng
               </Link>
             </>
           )}
@@ -209,6 +222,19 @@ export const Navbar = () => {
                 >
                   <Users className="w-5 h-5" />
                   Quản lý người dùng
+                </Link>
+
+                <Link
+                  to="/admin/orders"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`text-lg flex items-center gap-2 ${
+                    location.pathname.startsWith("/admin/orders")
+                      ? "text-orange-600"
+                      : "text-slate-700"
+                  }`}
+                >
+                  <ClipboardList className="w-5 h-5" />
+                  Quản lý đơn hàng
                 </Link>
               </>
             )}
