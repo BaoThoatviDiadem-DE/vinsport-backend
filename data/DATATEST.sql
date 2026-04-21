@@ -217,7 +217,7 @@ VALUES
 INSERT INTO Payments (order_id, method, status)
 VALUES 
 (1, N'COD', N'Paid'),
-(2, N'Bank', N'Paid'),
+(2, N'COD', N'Paid'),
 (3, N'Bank', N'Pending'),
 (4, N'COD', N'Paid'),
 (5, N'Bank', N'Failed');
