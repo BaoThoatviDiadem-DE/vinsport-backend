@@ -11,6 +11,8 @@ type UserItem = {
   role: "admin" | "user";
 };
 
+type RoleFilter = "all" | "admin" | "user";
+
 function toArray(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.users)) return data.users;
@@ -35,6 +37,7 @@ export default function AdminUsers() {
   const [isLoading, setIsLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | string | null>(null);
   const [searchEmail, setSearchEmail] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
 
   const adminCount = useMemo(() => {
     return users.filter((u) => u.role === "admin").length;
@@ -43,6 +46,11 @@ export default function AdminUsers() {
   const userCount = useMemo(() => {
     return users.filter((u) => u.role === "user").length;
   }, [users]);
+
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === "all") return users;
+    return users.filter((u) => u.role === roleFilter);
+  }, [users, roleFilter]);
 
   const loadUsers = async (email = "") => {
     try {
@@ -90,7 +98,12 @@ export default function AdminUsers() {
 
   const handleResetSearch = async () => {
     setSearchEmail("");
+    setRoleFilter("all");
     await loadUsers("");
+  };
+
+  const handleRoleFilterClick = (role: RoleFilter) => {
+    setRoleFilter((prev) => (prev === role ? "all" : role));
   };
 
   const handleSaveUser = async (user: UserItem) => {
@@ -156,24 +169,54 @@ export default function AdminUsers() {
         <div className="flex items-center gap-3 flex-wrap mb-4">
           <h2 className="text-xl font-semibold">Danh sách người dùng</h2>
 
-          <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
+          <button
+            type="button"
+            onClick={() => setRoleFilter("all")}
+            className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+              roleFilter === "all"
+                ? "bg-orange-500 text-white"
+                : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+            }`}
+          >
             Tổng số: {users.length}
-          </span>
+          </button>
 
-          <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold">
+          <button
+            type="button"
+            onClick={() => handleRoleFilterClick("admin")}
+            className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+              roleFilter === "admin"
+                ? "bg-red-500 text-white"
+                : "bg-red-100 text-red-700 hover:bg-red-200"
+            }`}
+          >
             Admin: {adminCount}
-          </span>
+          </button>
 
-          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+          <button
+            type="button"
+            onClick={() => handleRoleFilterClick("user")}
+            className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+              roleFilter === "user"
+                ? "bg-blue-500 text-white"
+                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+            }`}
+          >
             User: {userCount}
-          </span>
+          </button>
+
+          {roleFilter !== "all" && (
+            <span className="text-sm text-slate-500">
+              Đang lọc: <span className="font-semibold">{roleFilter}</span>
+            </span>
+          )}
         </div>
 
         {isLoading ? (
           <div className="py-10 text-center text-slate-500">
             Đang tải người dùng...
           </div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <div className="py-10 text-center text-slate-500">
             Không có người dùng nào.
           </div>
@@ -193,7 +236,7 @@ export default function AdminUsers() {
               </thead>
 
               <tbody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={String(user.id)} className="hover:bg-slate-50 align-top">
                     <td className="p-3 border-b whitespace-nowrap">{user.id}</td>
 

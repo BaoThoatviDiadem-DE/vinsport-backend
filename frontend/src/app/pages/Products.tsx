@@ -6,6 +6,16 @@ import { MOCK_PRODUCTS } from "../data/mockData";
 import { ProductCard } from "../components/ProductCard";
 import toast from "react-hot-toast";
 
+const normalizeCategory = (value?: string) => {
+  const text = String(value || "").trim().toLowerCase();
+
+  if (text.includes("giày") || text.includes("shoe")) return "Giày";
+  if (text.includes("quần")) return "Quần";
+  if (text.includes("áo") || text.includes("ao")) return "Áo";
+
+  return "";
+};
+
 export const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -50,12 +60,6 @@ export const Products = () => {
     fetchProducts();
   }, [searchQuery]);
 
-  const categoryGroups: Record<string, string[]> = {
-    "Áo": ["Áo bóng đá", "Áo gym", "Áo khoác thể thao"],
-    "Quần": ["Quần short", "Quần dài thể thao"],
-    "Giày": ["Giày chạy bộ"],
-  };
-
   const displayCategories = ["Quần", "Áo", "Giày"];
 
   const brands = useMemo(() => {
@@ -97,32 +101,25 @@ export const Products = () => {
     if (!products || products.length === 0) return [];
 
     let result = products.filter((product) => {
-      const productCategory = String(product.category || "").trim().toLowerCase();
-
-      const mappedCategories = selectedCategory
-        ? (categoryGroups[selectedCategory] || [selectedCategory]).map((item) =>
-            item.toLowerCase()
-          )
-        : [];
-
       const matchCategory = selectedCategory
-        ? mappedCategories.includes(productCategory)
+        ? normalizeCategory(product.category) === selectedCategory
         : true;
 
       const matchBrand = selectedBrand
-        ? product.brand?.toLowerCase() === selectedBrand.toLowerCase()
+        ? String(product.brand || "").toLowerCase() === selectedBrand.toLowerCase()
         : true;
 
-      const productPrice = typeof product.price === "number" ? product.price : 0;
+      const productPrice =
+        typeof product.price === "number" ? product.price : Number(product.price || 0);
       const matchPrice = productPrice >= minPrice && productPrice <= maxPrice;
 
       return matchCategory && matchBrand && matchPrice;
     });
 
     if (sortOrder === "asc") {
-      result = [...result].sort((a, b) => (a.price || 0) - (b.price || 0));
+      result = [...result].sort((a, b) => (Number(a.price || 0) - Number(b.price || 0)));
     } else if (sortOrder === "desc") {
-      result = [...result].sort((a, b) => (b.price || 0) - (a.price || 0));
+      result = [...result].sort((a, b) => (Number(b.price || 0) - Number(a.price || 0)));
     }
 
     return result;
@@ -141,7 +138,9 @@ export const Products = () => {
             <button
               onClick={() => updateFilter("category", "")}
               className={`block w-full text-left text-sm ${
-                !selectedCategory ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"
+                !selectedCategory
+                  ? "text-orange-600 font-medium"
+                  : "text-slate-600 hover:text-orange-600"
               }`}
             >
               Tất cả danh mục
@@ -152,7 +151,9 @@ export const Products = () => {
                 key={cat}
                 onClick={() => updateFilter("category", cat)}
                 className={`block w-full text-left text-sm ${
-                  selectedCategory === cat ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"
+                  selectedCategory === cat
+                    ? "text-orange-600 font-medium"
+                    : "text-slate-600 hover:text-orange-600"
                 }`}
               >
                 {cat}
@@ -167,7 +168,9 @@ export const Products = () => {
             <button
               onClick={() => updateFilter("brand", "")}
               className={`block w-full text-left text-sm ${
-                !selectedBrand ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"
+                !selectedBrand
+                  ? "text-orange-600 font-medium"
+                  : "text-slate-600 hover:text-orange-600"
               }`}
             >
               Tất cả thương hiệu
@@ -178,7 +181,9 @@ export const Products = () => {
                 key={brand}
                 onClick={() => updateFilter("brand", brand)}
                 className={`block w-full text-left text-sm ${
-                  selectedBrand === brand ? "text-orange-600 font-medium" : "text-slate-600 hover:text-orange-600"
+                  selectedBrand === brand
+                    ? "text-orange-600 font-medium"
+                    : "text-slate-600 hover:text-orange-600"
                 }`}
               >
                 {brand}
@@ -284,7 +289,9 @@ export const Products = () => {
               <h2 className="text-xl font-bold text-slate-800">
                 {selectedCategory ? `Sản phẩm ${selectedCategory}` : "Tất cả sản phẩm"}
               </h2>
-              <span className="text-slate-500 text-sm">Hiển thị {filteredProducts.length} sản phẩm</span>
+              <span className="text-slate-500 text-sm">
+                Hiển thị {filteredProducts.length} sản phẩm
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -304,7 +311,9 @@ export const Products = () => {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100">
               <Loader2 className="w-12 h-12 text-orange-600 animate-spin mb-4" />
-              <p className="text-slate-500 font-medium">Đang kết nối hệ thống VinSport...</p>
+              <p className="text-slate-500 font-medium">
+                Đang kết nối hệ thống VinSport...
+              </p>
             </div>
           ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -317,8 +326,12 @@ export const Products = () => {
               <div className="text-slate-400 mb-4 flex justify-center">
                 <Filter className="w-12 h-12" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Không tìm thấy sản phẩm nào</h3>
-              <p className="text-slate-500 mb-6">Bạn hãy thử mở rộng mức giá hoặc bỏ bớt bộ lọc nhé.</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
+                Không tìm thấy sản phẩm nào
+              </h3>
+              <p className="text-slate-500 mb-6">
+                Bạn hãy thử mở rộng mức giá hoặc bỏ bớt bộ lọc nhé.
+              </p>
               <button
                 onClick={() => setSearchParams(new URLSearchParams())}
                 className="bg-orange-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-700"
@@ -332,11 +345,17 @@ export const Products = () => {
 
       {isMobileFilterOpen && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileFilterOpen(false)}></div>
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setIsMobileFilterOpen(false)}
+          ></div>
           <div className="relative w-4/5 max-w-sm bg-white h-full shadow-2xl overflow-y-auto z-10 p-6 flex flex-col">
             <div className="flex justify-between items-center mb-6 border-b pb-4">
               <h2 className="text-xl font-bold">Lọc Sản Phẩm</h2>
-              <button onClick={() => setIsMobileFilterOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">
+              <button
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-full"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>

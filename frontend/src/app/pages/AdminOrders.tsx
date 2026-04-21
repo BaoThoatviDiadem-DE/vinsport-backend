@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Search, Filter } from "lucide-react";
 import api from "../api/api";
 
 type PaymentMethod = "cod" | "banking" | "momo" | string;
@@ -23,14 +24,7 @@ type AdminOrder = {
   createdAt?: string;
 };
 
-type SearchField =
-  | "all"
-  | "id"
-  | "customerName"
-  | "phone"
-  | "paymentMethod"
-  | "paymentStatus"
-  | "orderStatus";
+type SearchField = "all" | "id" | "customerName" | "phone" | "paymentMethod";
 
 const MOCK_ORDERS: AdminOrder[] = [
   {
@@ -55,6 +49,20 @@ const MOCK_ORDERS: AdminOrder[] = [
     orderStatus: "pending",
     createdAt: new Date().toISOString(),
   },
+];
+
+const PAYMENT_STATUS_OPTIONS = [
+  { value: "pending", label: "Chờ xác nhận" },
+  { value: "paid", label: "Đã thanh toán" },
+  { value: "failed", label: "Thất bại" },
+];
+
+const ORDER_STATUS_OPTIONS = [
+  { value: "pending", label: "Chờ xử lý" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "shipping", label: "Đang giao" },
+  { value: "completed", label: "Hoàn thành" },
+  { value: "cancelled", label: "Đã hủy" },
 ];
 
 function toArray(data: any): any[] {
@@ -112,17 +120,17 @@ function orderStatusLabel(status: string) {
 }
 
 function paymentStatusClass(status: string) {
-  if (status === "paid") return "bg-green-100 text-green-700";
-  if (status === "failed") return "bg-red-100 text-red-700";
-  return "bg-orange-100 text-orange-700";
+  if (status === "paid") return "bg-green-100 text-green-700 border-green-200";
+  if (status === "failed") return "bg-red-100 text-red-700 border-red-200";
+  return "bg-orange-100 text-orange-700 border-orange-200";
 }
 
 function orderStatusClass(status: string) {
-  if (status === "completed") return "bg-green-100 text-green-700";
-  if (status === "confirmed") return "bg-emerald-100 text-emerald-700";
-  if (status === "shipping") return "bg-blue-100 text-blue-700";
-  if (status === "cancelled") return "bg-red-100 text-red-700";
-  return "bg-slate-100 text-slate-700";
+  if (status === "completed") return "bg-green-100 text-green-700 border-green-200";
+  if (status === "confirmed") return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (status === "shipping") return "bg-blue-100 text-blue-700 border-blue-200";
+  if (status === "cancelled") return "bg-red-100 text-red-700 border-red-200";
+  return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
 export default function AdminOrders() {
@@ -131,6 +139,15 @@ export default function AdminOrders() {
   const [keyword, setKeyword] = useState("");
   const [searchField, setSearchField] = useState<SearchField>("all");
   const [savingId, setSavingId] = useState<number | string | null>(null);
+
+  const [paymentStatusFilters, setPaymentStatusFilters] = useState<string[]>([]);
+  const [orderStatusFilters, setOrderStatusFilters] = useState<string[]>([]);
+
+  const [paymentFilterOpen, setPaymentFilterOpen] = useState(false);
+  const [orderFilterOpen, setOrderFilterOpen] = useState(false);
+
+  const [paymentFilterKeyword, setPaymentFilterKeyword] = useState("");
+  const [orderFilterKeyword, setOrderFilterKeyword] = useState("");
 
   const loadOrders = async () => {
     try {
@@ -161,44 +178,96 @@ export default function AdminOrders() {
     loadOrders();
   }, []);
 
+  const filteredPaymentOptions = useMemo(() => {
+    const q = paymentFilterKeyword.trim().toLowerCase();
+    if (!q) return PAYMENT_STATUS_OPTIONS;
+    return PAYMENT_STATUS_OPTIONS.filter(
+      (item) =>
+        item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q)
+    );
+  }, [paymentFilterKeyword]);
+
+  const filteredOrderOptions = useMemo(() => {
+    const q = orderFilterKeyword.trim().toLowerCase();
+    if (!q) return ORDER_STATUS_OPTIONS;
+    return ORDER_STATUS_OPTIONS.filter(
+      (item) =>
+        item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q)
+    );
+  }, [orderFilterKeyword]);
+
+  const togglePaymentStatusFilter = (value: string) => {
+    setPaymentStatusFilters((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
+  };
+
+  const toggleOrderStatusFilter = (value: string) => {
+    setOrderStatusFilters((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setKeyword("");
+    setSearchField("all");
+    setPaymentStatusFilters([]);
+    setOrderStatusFilters([]);
+    setPaymentFilterKeyword("");
+    setOrderFilterKeyword("");
+  };
+
   const filteredOrders = useMemo(() => {
     const q = keyword.trim().toLowerCase();
-    if (!q) return orders;
 
     return orders.filter((order) => {
       const orderId = String(order.id).toLowerCase();
       const customerName = String(order.customerName ?? "").toLowerCase();
       const phone = String(order.phone ?? "").toLowerCase();
       const paymentMethod = String(order.paymentMethod ?? "").toLowerCase();
-      const paymentStatus = String(order.paymentStatus ?? "").toLowerCase();
-      const orderStatus = String(order.orderStatus ?? "").toLowerCase();
 
-      switch (searchField) {
-        case "id":
-          return orderId.includes(q);
-        case "customerName":
-          return customerName.includes(q);
-        case "phone":
-          return phone.includes(q);
-        case "paymentMethod":
-          return paymentMethod.includes(q);
-        case "paymentStatus":
-          return paymentStatus.includes(q);
-        case "orderStatus":
-          return orderStatus.includes(q);
-        case "all":
-        default:
-          return (
-            orderId.includes(q) ||
-            customerName.includes(q) ||
-            phone.includes(q) ||
-            paymentMethod.includes(q) ||
-            paymentStatus.includes(q) ||
-            orderStatus.includes(q)
-          );
+      let matchesSearch = true;
+
+      if (q) {
+        switch (searchField) {
+          case "id":
+            matchesSearch = orderId.includes(q);
+            break;
+          case "customerName":
+            matchesSearch = customerName.includes(q);
+            break;
+          case "phone":
+            matchesSearch = phone.includes(q);
+            break;
+          case "paymentMethod":
+            matchesSearch = paymentMethod.includes(q);
+            break;
+          case "all":
+          default:
+            matchesSearch =
+              orderId.includes(q) ||
+              customerName.includes(q) ||
+              phone.includes(q) ||
+              paymentMethod.includes(q);
+            break;
+        }
       }
+
+      const matchesPaymentStatus =
+        paymentStatusFilters.length === 0 ||
+        paymentStatusFilters.includes(order.paymentStatus);
+
+      const matchesOrderStatus =
+        orderStatusFilters.length === 0 ||
+        orderStatusFilters.includes(order.orderStatus);
+
+      return matchesSearch && matchesPaymentStatus && matchesOrderStatus;
     });
-  }, [orders, keyword, searchField]);
+  }, [orders, keyword, searchField, paymentStatusFilters, orderStatusFilters]);
 
   const handleFieldChange = (
     id: number | string,
@@ -228,7 +297,7 @@ export default function AdminOrders() {
             orderStatus: order.orderStatus,
           });
         } catch {
-          // fallback demo frontend-only
+          // demo fallback
         }
       }
 
@@ -246,40 +315,195 @@ export default function AdminOrders() {
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Quản lý đơn hàng</h1>
         <p className="text-slate-600 mt-2">
-          Cập nhật trạng thái thanh toán và trạng thái đơn hàng trực tiếp.
+          Tìm kiếm theo từng tiêu chí và lọc nhanh theo trạng thái.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
-            <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
-              Tổng số: {orders.length}
-            </span>
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
+              <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
+                Tổng số: {orders.length}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold">
+                Đang hiển thị: {filteredOrders.length}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+              <select
+                value={searchField}
+                onChange={(e) => setSearchField(e.target.value as SearchField)}
+                className="border rounded-xl px-4 py-3 outline-none focus:ring min-w-[190px]"
+              >
+                <option value="all">Tất cả</option>
+                <option value="id">Mã đơn</option>
+                <option value="customerName">Khách hàng</option>
+                <option value="phone">SĐT</option>
+                <option value="paymentMethod">Phương thức</option>
+              </select>
+
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="Nhập từ khóa tìm kiếm..."
+                className="w-full xl:w-80 border rounded-xl px-4 py-3 outline-none focus:ring"
+              />
+
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="px-4 py-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 whitespace-nowrap"
+              >
+                Xóa lọc
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            <select
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value as SearchField)}
-              className="border rounded-xl px-4 py-3 outline-none focus:ring min-w-[180px]"
-            >
-              <option value="all">Tất cả</option>
-              <option value="id">Mã đơn</option>
-              <option value="customerName">Khách hàng</option>
-              <option value="phone">Số điện thoại</option>
-              <option value="paymentMethod">Phương thức</option>
-              <option value="paymentStatus">TT thanh toán</option>
-              <option value="orderStatus">TT đơn hàng</option>
-            </select>
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentFilterOpen((prev) => !prev);
+                  setOrderFilterOpen(false);
+                }}
+                className="px-4 py-3 rounded-xl border bg-white hover:bg-slate-50 min-w-[220px] text-left flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  TT thanh toán
+                  {paymentStatusFilters.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700">
+                      {paymentStatusFilters.length}
+                    </span>
+                  )}
+                </span>
+              </button>
 
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Nhập từ khóa tìm kiếm..."
-              className="w-full lg:w-80 border rounded-xl px-4 py-3 outline-none focus:ring"
-            />
+              {paymentFilterOpen && (
+                <div className="absolute z-20 mt-2 w-[320px] bg-white border rounded-xl shadow-lg overflow-hidden">
+                  <div className="p-3 border-b">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        value={paymentFilterKeyword}
+                        onChange={(e) => setPaymentFilterKeyword(e.target.value)}
+                        placeholder="Tìm kiếm bộ lọc"
+                        className="w-full border rounded-lg pl-9 pr-3 py-2 outline-none focus:ring"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="max-h-[220px] overflow-y-auto py-2">
+                    {filteredPaymentOptions.map((item) => (
+                      <label
+                        key={item.value}
+                        className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={paymentStatusFilters.includes(item.value)}
+                          onChange={() => togglePaymentStatusFilter(item.value)}
+                          className="w-4 h-4"
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="border-t px-3 py-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentStatusFilters([])}
+                      className="text-slate-400 hover:text-slate-600 text-sm"
+                    >
+                      Xóa chọn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentFilterOpen(false)}
+                      className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm font-medium"
+                    >
+                      Đồng ý
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setOrderFilterOpen((prev) => !prev);
+                  setPaymentFilterOpen(false);
+                }}
+                className="px-4 py-3 rounded-xl border bg-white hover:bg-slate-50 min-w-[220px] text-left flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  TT đơn hàng
+                  {orderStatusFilters.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">
+                      {orderStatusFilters.length}
+                    </span>
+                  )}
+                </span>
+              </button>
+
+              {orderFilterOpen && (
+                <div className="absolute z-20 mt-2 w-[320px] bg-white border rounded-xl shadow-lg overflow-hidden">
+                  <div className="p-3 border-b">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        value={orderFilterKeyword}
+                        onChange={(e) => setOrderFilterKeyword(e.target.value)}
+                        placeholder="Tìm kiếm bộ lọc"
+                        className="w-full border rounded-lg pl-9 pr-3 py-2 outline-none focus:ring"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="max-h-[220px] overflow-y-auto py-2">
+                    {filteredOrderOptions.map((item) => (
+                      <label
+                        key={item.value}
+                        className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={orderStatusFilters.includes(item.value)}
+                          onChange={() => toggleOrderStatusFilter(item.value)}
+                          className="w-4 h-4"
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="border-t px-3 py-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setOrderStatusFilters([])}
+                      className="text-slate-400 hover:text-slate-600 text-sm"
+                    >
+                      Xóa chọn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderFilterOpen(false)}
+                      className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm font-medium"
+                    >
+                      Đồng ý
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -289,7 +513,7 @@ export default function AdminOrders() {
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="py-10 text-center text-slate-500">
-            Không có đơn hàng nào.
+            Không có đơn hàng nào phù hợp.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -339,7 +563,7 @@ export default function AdminOrders() {
                     <td className="p-3 border-b">
                       <div className="mb-2">
                         <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${paymentStatusClass(
+                          className={`px-3 py-1 rounded-full text-sm font-semibold border ${paymentStatusClass(
                             order.paymentStatus
                           )}`}
                         >
@@ -367,7 +591,7 @@ export default function AdminOrders() {
                     <td className="p-3 border-b">
                       <div className="mb-2">
                         <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${orderStatusClass(
+                          className={`px-3 py-1 rounded-full text-sm font-semibold border ${orderStatusClass(
                             order.orderStatus
                           )}`}
                         >

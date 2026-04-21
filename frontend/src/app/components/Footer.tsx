@@ -25,6 +25,7 @@ export const Footer = () => {
           <ul className="space-y-2 text-sm">
             <li><Link to="/products?category=Giày" className="hover:text-white transition-colors">Giày thể thao</Link></li>
             <li><Link to="/products?category=Áo" className="hover:text-white transition-colors">Áo thể thao</Link></li>
+            <li><Link to="/products?category=Quần" className="hover:text-white transition-colors">Quần thể thao</Link></li>
           </ul>
         </div>
 
