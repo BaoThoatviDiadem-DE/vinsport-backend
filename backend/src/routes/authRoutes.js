@@ -32,7 +32,6 @@ router.post("/login", async (req, res) => {
 
     const user = result.recordset[0];
 
-    // Giữ nguyên cách so sánh plaintext như code hiện tại
     if (String(user.password) !== String(password)) {
       return res.status(401).json({
         message: "Tài khoản hoặc mật khẩu không chính xác",

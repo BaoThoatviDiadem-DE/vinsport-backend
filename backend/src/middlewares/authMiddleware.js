@@ -7,6 +7,9 @@ const verifyToken = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+
+    // Khớp với token từ authRoutes:
+    // user-<user_id>-<role>-token
     const match = token.match(/^user-(\d+)-(admin|user)-token$/);
 
     if (!match) {

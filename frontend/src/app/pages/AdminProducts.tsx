@@ -13,6 +13,8 @@ type Product = {
   sizes?: string[] | string;
 };
 
+type CategoryFilter = "all" | "Áo" | "Quần" | "Giày";
+
 const emptyForm: Product = {
   name: "",
   description: "",
@@ -63,6 +65,16 @@ function normalizeProduct(item: any): Product {
   };
 }
 
+function inferCategoryGroup(product: Product): "Áo" | "Quần" | "Giày" | "Khác" {
+  const text = `${product.category || ""} ${product.name || ""}`.toLowerCase();
+
+  if (text.includes("giày") || text.includes("shoe")) return "Giày";
+  if (text.includes("quần")) return "Quần";
+  if (text.includes("áo") || text.includes("ao")) return "Áo";
+
+  return "Khác";
+}
+
 async function getProducts(): Promise<Product[]> {
   try {
     const data = await api.get("/admin/products");
@@ -100,6 +112,7 @@ async function deleteProduct(id: number | string) {
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [form, setForm] = useState<Product>(emptyForm);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | string | null>(null);
@@ -123,19 +136,37 @@ export default function AdminProducts() {
     loadProducts();
   }, []);
 
+  const aoCount = useMemo(() => {
+    return products.filter((p) => inferCategoryGroup(p) === "Áo").length;
+  }, [products]);
+
+  const quanCount = useMemo(() => {
+    return products.filter((p) => inferCategoryGroup(p) === "Quần").length;
+  }, [products]);
+
+  const giayCount = useMemo(() => {
+    return products.filter((p) => inferCategoryGroup(p) === "Giày").length;
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     const q = keyword.trim().toLowerCase();
-    if (!q) return products;
 
     return products.filter((p) => {
-      return (
+      const group = inferCategoryGroup(p);
+
+      const matchKeyword =
+        !q ||
         String(p.id ?? "").toLowerCase().includes(q) ||
         String(p.name ?? "").toLowerCase().includes(q) ||
         String(p.brand ?? "").toLowerCase().includes(q) ||
-        String(p.category ?? "").toLowerCase().includes(q)
-      );
+        String(p.category ?? "").toLowerCase().includes(q);
+
+      const matchCategory =
+        categoryFilter === "all" ? true : group === categoryFilter;
+
+      return matchKeyword && matchCategory;
     });
-  }, [products, keyword]);
+  }, [products, keyword, categoryFilter]);
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -387,9 +418,66 @@ export default function AdminProducts() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-xl font-semibold">Danh sách sản phẩm</h2>
-            <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
+
+            <button
+              type="button"
+              onClick={() => setCategoryFilter("all")}
+              className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+                categoryFilter === "all"
+                  ? "bg-orange-500 text-white"
+                  : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+              }`}
+            >
               Tổng số: {products.length}
-            </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCategoryFilter((prev) => (prev === "Áo" ? "all" : "Áo"))
+              }
+              className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+                categoryFilter === "Áo"
+                  ? "bg-red-500 text-white"
+                  : "bg-red-100 text-red-700 hover:bg-red-200"
+              }`}
+            >
+              Áo: {aoCount}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCategoryFilter((prev) => (prev === "Quần" ? "all" : "Quần"))
+              }
+              className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+                categoryFilter === "Quần"
+                  ? "bg-blue-500 text-white"
+                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              }`}
+            >
+              Quần: {quanCount}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCategoryFilter((prev) => (prev === "Giày" ? "all" : "Giày"))
+              }
+              className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+                categoryFilter === "Giày"
+                  ? "bg-emerald-500 text-white"
+                  : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              }`}
+            >
+              Giày: {giayCount}
+            </button>
+
+            {categoryFilter !== "all" && (
+              <span className="text-sm text-slate-500">
+                Đang lọc: <span className="font-semibold">{categoryFilter}</span>
+              </span>
+            )}
           </div>
 
           <input

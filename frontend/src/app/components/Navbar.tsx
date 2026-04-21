@@ -9,6 +9,8 @@ import {
   Package,
   LogOut,
   ShieldCheck,
+  Users,
+  ClipboardList,
 } from "lucide-react";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -60,17 +62,43 @@ export const Navbar = () => {
           ))}
 
           {user?.role === "admin" && (
-            <Link
-              to="/admin/products"
-              className={`hover:text-orange-600 transition-colors flex items-center gap-2 ${
-                location.pathname.startsWith("/admin")
-                  ? "text-orange-600"
-                  : "text-slate-700"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Quản lý sản phẩm
-            </Link>
+            <>
+              <Link
+                to="/admin/products"
+                className={`hover:text-orange-600 transition-colors flex items-center gap-2 ${
+                  location.pathname.startsWith("/admin/products")
+                    ? "text-orange-600"
+                    : "text-slate-700"
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Quản lý sản phẩm
+              </Link>
+
+              <Link
+                to="/admin/users"
+                className={`hover:text-orange-600 transition-colors flex items-center gap-2 ${
+                  location.pathname.startsWith("/admin/users")
+                    ? "text-orange-600"
+                    : "text-slate-700"
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Quản lý người dùng
+              </Link>
+
+              <Link
+                to="/admin/orders"
+                className={`hover:text-orange-600 transition-colors flex items-center gap-2 ${
+                  location.pathname.startsWith("/admin/orders")
+                    ? "text-orange-600"
+                    : "text-slate-700"
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                Quản lý đơn hàng
+              </Link>
+            </>
           )}
         </nav>
 
@@ -169,18 +197,46 @@ export const Navbar = () => {
             ))}
 
             {user?.role === "admin" && (
-              <Link
-                to="/admin/products"
-                onClick={() => setIsMenuOpen(false)}
-                className={`text-lg flex items-center gap-2 ${
-                  location.pathname.startsWith("/admin")
-                    ? "text-orange-600"
-                    : "text-slate-700"
-                }`}
-              >
-                <ShieldCheck className="w-5 h-5" />
-                Quản lý sản phẩm
-              </Link>
+              <>
+                <Link
+                  to="/admin/products"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`text-lg flex items-center gap-2 ${
+                    location.pathname.startsWith("/admin/products")
+                      ? "text-orange-600"
+                      : "text-slate-700"
+                  }`}
+                >
+                  <ShieldCheck className="w-5 h-5" />
+                  Quản lý sản phẩm
+                </Link>
+
+                <Link
+                  to="/admin/users"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`text-lg flex items-center gap-2 ${
+                    location.pathname.startsWith("/admin/users")
+                      ? "text-orange-600"
+                      : "text-slate-700"
+                  }`}
+                >
+                  <Users className="w-5 h-5" />
+                  Quản lý người dùng
+                </Link>
+
+                <Link
+                  to="/admin/orders"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`text-lg flex items-center gap-2 ${
+                    location.pathname.startsWith("/admin/orders")
+                      ? "text-orange-600"
+                      : "text-slate-700"
+                  }`}
+                >
+                  <ClipboardList className="w-5 h-5" />
+                  Quản lý đơn hàng
+                </Link>
+              </>
             )}
 
             <div className="h-px bg-slate-100 my-2"></div>
