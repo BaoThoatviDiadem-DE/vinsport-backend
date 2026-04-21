@@ -172,6 +172,44 @@ const parseSizes = (sizes: unknown): string[] => {
   return [];
 };
 
+const sortSizes = (sizes: string[]): string[] => {
+  const clothingOrder = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
+
+  return [...new Set(sizes)]
+    .map((s) => String(s).trim())
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aUpper = a.toUpperCase();
+      const bUpper = b.toUpperCase();
+
+      const aIndex = clothingOrder.indexOf(aUpper);
+      const bIndex = clothingOrder.indexOf(bUpper);
+
+      const aIsClothing = aIndex !== -1;
+      const bIsClothing = bIndex !== -1;
+
+      if (aIsClothing && bIsClothing) {
+        return aIndex - bIndex;
+      }
+
+      const aNum = Number(a);
+      const bNum = Number(b);
+      const aIsNumber = !Number.isNaN(aNum);
+      const bIsNumber = !Number.isNaN(bNum);
+
+      if (aIsNumber && bIsNumber) {
+        return aNum - bNum;
+      }
+
+      if (aIsClothing && !bIsClothing) return -1;
+      if (!aIsClothing && bIsClothing) return 1;
+      if (aIsNumber && !bIsNumber) return -1;
+      if (!aIsNumber && bIsNumber) return 1;
+
+      return a.localeCompare(b);
+    });
+};
+
 export const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -266,13 +304,11 @@ export const ProductDetail = () => {
           )
         : product.variants;
 
-      return [
-        ...new Set(
-          filtered
-            .map((variant: ProductVariant) => variant.size)
-            .filter((size): size is string => Boolean(size))
-        ),
-      ];
+      return sortSizes(
+  filtered
+    .map((variant: ProductVariant) => variant.size)
+    .filter((size): size is string => Boolean(size))
+);
     }
 
     return normalizedSizes;
@@ -290,7 +326,7 @@ export const ProductDetail = () => {
             .filter((size): size is string => Boolean(size))
         : [];
 
-    return [...new Set([...fromProductSizes, ...fromVariants])];
+    return sortSizes([...fromProductSizes, ...fromVariants]);
   }, [product, normalizedSizes]);
 
   const availableColors = useMemo<ProductColor[]>(() => {
