@@ -112,64 +112,122 @@ FROM Orders
 WHERE status = N'Completed';
 
 -- ==============================
--- 15. TOP 5 SẢN PHẨM BÁN CHẠY
--- ==============================
-SELECT TOP 5
-    p.name,
-    SUM(od.quantity) AS total_sold
-FROM OrderDetails od
-JOIN ProductVariants pv ON od.variant_id = pv.variant_id
-JOIN Products p ON pv.product_id = p.product_id
-GROUP BY p.name
-ORDER BY total_sold DESC;
-
--- ==============================
--- 16. DOANH THU THEO SẢN PHẨM
+-- 15. XẾP HẠNG KHÁCH HÀNG THEO TỔNG CHI TIÊU
+-- (dễ ra dữ liệu hơn câu cũ)
 -- ==============================
 SELECT 
-    p.name,
-    SUM(od.quantity * od.price) AS revenue
-FROM OrderDetails od
-JOIN ProductVariants pv ON od.variant_id = pv.variant_id
-JOIN Products p ON pv.product_id = p.product_id
-GROUP BY p.name;
-
--- ==============================
--- 17. SẢN PHẨM CHƯA BÁN
--- ==============================
-SELECT p.*
-FROM Products p
-LEFT JOIN ProductVariants pv ON p.product_id = pv.product_id
-LEFT JOIN OrderDetails od ON pv.variant_id = od.variant_id
-WHERE od.order_id IS NULL;
-
--- ==============================
--- 18. USER CHI TIỀN NHIỀU NHẤT
--- ==============================
-SELECT TOP 1
+    u.user_id,
     u.name,
-    SUM(o.total_amount) AS total_spent
+    ISNULL(SUM(o.total_amount), 0) AS total_spent,
+    RANK() OVER (ORDER BY ISNULL(SUM(o.total_amount), 0) DESC) AS ranking
 FROM Users u
-JOIN Orders o ON u.user_id = o.user_id
-GROUP BY u.name
+LEFT JOIN Orders o ON u.user_id = o.user_id
+GROUP BY u.user_id, u.name
 ORDER BY total_spent DESC;
 
 -- ==============================
--- 19. SẢN PHẨM RATING CAO NHẤT
+-- 16. SẢN PHẨM BÁN CHẠY NHẤT TRONG TỪNG CATEGORY
+-- (CTE + RANK)
 -- ==============================
-SELECT TOP 1
-    p.name,
-    AVG(r.rating) AS avg_rating
-FROM Reviews r
-JOIN Products p ON r.product_id = p.product_id
-GROUP BY p.name
-ORDER BY avg_rating DESC;
+WITH ProductSalesByCategory AS (
+    SELECT 
+        c.category_id,
+        c.name AS category_name,
+        p.product_id,
+        p.name AS product_name,
+        SUM(od.quantity) AS total_sold,
+        RANK() OVER (
+            PARTITION BY c.category_id
+            ORDER BY SUM(od.quantity) DESC
+        ) AS rnk
+    FROM Categories c
+    JOIN Products p ON c.category_id = p.category_id
+    JOIN ProductVariants pv ON p.product_id = pv.product_id
+    JOIN OrderDetails od ON pv.variant_id = od.variant_id
+    JOIN Orders o ON od.order_id = o.order_id
+    WHERE o.status = N'Completed'
+    GROUP BY c.category_id, c.name, p.product_id, p.name
+)
+SELECT 
+    category_name,
+    product_name,
+    total_sold
+FROM ProductSalesByCategory
+WHERE rnk = 1;
 
 -- ==============================
--- 20. THỐNG KÊ ORDER THEO STATUS
+-- 17. THỐNG KÊ SỐ LƯỢNG ĐÃ BÁN CỦA TỪNG SẢN PHẨM
+-- (không còn bị rỗng như câu sản phẩm chưa bán)
 -- ==============================
 SELECT 
-    status,
-    COUNT(*) AS total_orders
-FROM Orders
-GROUP BY status;
+    p.product_id,
+    p.name,
+    ISNULL(SUM(od.quantity), 0) AS total_sold
+FROM Products p
+LEFT JOIN ProductVariants pv ON p.product_id = pv.product_id
+LEFT JOIN OrderDetails od ON pv.variant_id = od.variant_id
+GROUP BY p.product_id, p.name
+ORDER BY total_sold DESC, p.name;
+
+-- ==============================
+-- 18. DOANH THU THEO THÁNG VÀ SO SÁNH THÁNG TRƯỚC
+-- (CTE + LAG)
+-- ==============================
+WITH MonthlyRevenue AS (
+    SELECT 
+        YEAR(order_date) AS [year],
+        MONTH(order_date) AS [month],
+        SUM(total_amount) AS revenue
+    FROM Orders
+    WHERE status = N'Completed'
+    GROUP BY YEAR(order_date), MONTH(order_date)
+)
+SELECT 
+    [year],
+    [month],
+    revenue,
+    LAG(revenue) OVER (ORDER BY [year], [month]) AS prev_month_revenue,
+    revenue - ISNULL(LAG(revenue) OVER (ORDER BY [year], [month]), 0) AS revenue_diff
+FROM MonthlyRevenue
+ORDER BY [year], [month];
+
+-- ==============================
+-- 19. XẾP HẠNG SẢN PHẨM THEO SỐ LƯỢNG BIẾN THỂ
+-- (không dùng đánh giá sản phẩm nữa)
+-- ==============================
+SELECT 
+    p.product_id,
+    p.name,
+    COUNT(pv.variant_id) AS total_variants,
+    RANK() OVER (ORDER BY COUNT(pv.variant_id) DESC) AS ranking
+FROM Products p
+LEFT JOIN ProductVariants pv ON p.product_id = pv.product_id
+GROUP BY p.product_id, p.name
+ORDER BY ranking, p.name;
+
+-- ==============================
+-- 20. GIÁ GỐC - GIÁ SAU KHUYẾN MÃI - TRẠNG THÁI SALE HIỆN TẠI
+-- (CASE WHEN + JOIN nhiều bảng)
+-- ==============================
+SELECT 
+    p.product_id,
+    p.name AS product_name,
+    pv.variant_id,
+    pv.price AS original_price,
+    s.name AS sale_name,
+    s.discount_percent,
+    CASE 
+        WHEN GETDATE() BETWEEN s.start_date AND s.end_date
+            THEN pv.price * (1 - s.discount_percent / 100.0)
+        ELSE pv.price
+    END AS final_price,
+    CASE
+        WHEN GETDATE() BETWEEN s.start_date AND s.end_date
+            THEN N'Đang áp dụng'
+        ELSE N'Không áp dụng'
+    END AS sale_status
+FROM Products p
+JOIN ProductVariants pv ON p.product_id = pv.product_id
+LEFT JOIN ProductSales ps ON p.product_id = ps.product_id
+LEFT JOIN Sales s ON ps.sale_id = s.sale_id
+ORDER BY p.product_id, pv.variant_id;
