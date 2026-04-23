@@ -113,7 +113,6 @@ WHERE status = N'Completed';
 
 -- ==============================
 -- 15. XẾP HẠNG KHÁCH HÀNG THEO TỔNG CHI TIÊU
--- (dễ ra dữ liệu hơn câu cũ)
 -- ==============================
 SELECT 
     u.user_id,
@@ -127,7 +126,6 @@ ORDER BY total_spent DESC;
 
 -- ==============================
 -- 16. SẢN PHẨM BÁN CHẠY NHẤT TRONG TỪNG CATEGORY
--- (CTE + RANK)
 -- ==============================
 WITH ProductSalesByCategory AS (
     SELECT 
@@ -157,7 +155,6 @@ WHERE rnk = 1;
 
 -- ==============================
 -- 17. THỐNG KÊ SỐ LƯỢNG ĐÃ BÁN CỦA TỪNG SẢN PHẨM
--- (không còn bị rỗng như câu sản phẩm chưa bán)
 -- ==============================
 SELECT 
     p.product_id,
@@ -171,7 +168,6 @@ ORDER BY total_sold DESC, p.name;
 
 -- ==============================
 -- 18. DOANH THU THEO THÁNG VÀ SO SÁNH THÁNG TRƯỚC
--- (CTE + LAG)
 -- ==============================
 WITH MonthlyRevenue AS (
     SELECT 
@@ -193,7 +189,7 @@ ORDER BY [year], [month];
 
 -- ==============================
 -- 19. XẾP HẠNG SẢN PHẨM THEO SỐ LƯỢNG BIẾN THỂ
--- (không dùng đánh giá sản phẩm nữa)
+-- 
 -- ==============================
 SELECT 
     p.product_id,
